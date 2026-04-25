@@ -79,7 +79,15 @@ ipcMain.handle('run-automation', async (_event, key: string) => {
         mainWindow?.webContents.send('automation-log', `下载进度: ${pct}%`);
       });
       log('下载完成');
-      task.executablePath = path.join(dl, 'chrome-win64', 'chrome.exe');
+      // Set executable path based on platform
+      if (process.platform === 'darwin') {
+        const arch = process.arch === 'arm64' ? 'chrome-mac-arm64' : 'chrome-mac-x64';
+        task.executablePath = path.join(dl, arch, 'Google Chrome for Testing.app', 'Contents', 'MacOS', 'Google Chrome for Testing');
+      } else if (process.platform === 'win32') {
+        task.executablePath = path.join(dl, 'chrome-win64', 'chrome.exe');
+      } else {
+        task.executablePath = path.join(dl, 'chrome-linux64', 'chrome');
+      }
     }
   }
 

@@ -16,7 +16,17 @@ function getBrowserInfo() {
   return {
     revision,
     version,
-    getUrl: () => `https://cdn.playwright.dev/builds/cft/${version}/win64/chrome-win64.zip`,
+    getUrl: () => {
+      // Detect platform
+      if (process.platform === 'darwin') {
+        const arch = process.arch === 'arm64' ? 'mac-arm64' : 'mac-x64';
+        return `https://cdn.playwright.dev/builds/cft/${version}/${arch}/chrome-${arch}.zip`;
+      }
+      if (process.platform === 'win32') {
+        return `https://cdn.playwright.dev/builds/cft/${version}/win64/chrome-win64.zip`;
+      }
+      return `https://cdn.playwright.dev/builds/cft/${version}/linux64/chrome-linux64.zip`;
+    },
   };
 }
 
@@ -24,20 +34,57 @@ const BROWSER_INFO = getBrowserInfo();
 
 // 本地 Playwright Chromium 路径
 function getPlaywrightChromePath(): string | null {
-  const basePath = process.env.LOCALAPPDATA
-    ? path.join(process.env.LOCALAPPDATA, 'ms-playwright', `chromium-${BROWSER_INFO.revision}`, 'chrome-win64', 'chrome.exe')
-    : null;
-  if (basePath && fs.existsSync(basePath)) return basePath;
+  // macOS
+  if (process.platform === 'darwin') {
+    const basePath = path.join(
+      app.getPath('home'),
+      'Library', 'Caches', 'ms-playwright',
+      `chromium-${BROWSER_INFO.revision}`,
+      'chrome-mac-arm64',
+      'Google Chrome for Testing.app',
+      'Contents', 'MacOS', 'Google Chrome for Testing'
+    );
+    if (fs.existsSync(basePath)) return basePath;
+    // Try Intel version too
+    const intelPath = basePath.replace('chrome-mac-arm64', 'chrome-mac-x64');
+    if (fs.existsSync(intelPath)) return intelPath;
+    return null;
+  }
+
+  // Windows
+  if (process.env.LOCALAPPDATA) {
+    const basePath = path.join(
+      process.env.LOCALAPPDATA,
+      'ms-playwright',
+      `chromium-${BROWSER_INFO.revision}`,
+      'chrome-win64',
+      'chrome.exe'
+    );
+    if (fs.existsSync(basePath)) return basePath;
+  }
+
   return null;
 }
 
 // 检查本地是否有 Google Chrome
 function hasLocalChrome(): boolean {
-  const paths = [
-    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-  ];
-  return paths.some(p => fs.existsSync(p));
+  if (process.platform === 'darwin') {
+    const paths = [
+      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      '/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary',
+    ];
+    return paths.some(p => fs.existsSync(p));
+  }
+
+  if (process.platform === 'win32') {
+    const paths = [
+      'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+      'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    ];
+    return paths.some(p => fs.existsSync(p));
+  }
+
+  return false;
 }
 
 // 下载浏览器
