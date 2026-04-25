@@ -3,9 +3,12 @@
   "version": "1.0.0",
   "main": "dist/electron/main/index.js",
   "scripts": {
-    "electron:dev": "npx tsc -p tsconfig.electron.json && node -e \"const fs=require('fs'),path=require('path');fs.readdirSync('electron/renderer').forEach(f=>fs.copyFileSync(path.join('electron/renderer',f),path.join('dist/electron/renderer',f)))\" && electron .",
-    "electron:build": "npx tsc -p tsconfig.electron.json && node -e \"const fs=require('fs'),path=require('path');fs.readdirSync('electron/renderer').forEach(f=>fs.copyFileSync(path.join('electron/renderer',f),path.join('dist/electron/renderer',f)))\" && electron-builder",
-    "electron:build:portable": "npx tsc -p tsconfig.electron.json && node -e \"const fs=require('fs'),path=require('path');fs.readdirSync('electron/renderer').forEach(f=>fs.copyFileSync(path.join('electron/renderer',f),path.join('dist/electron/renderer',f)))\" && electron-builder --win portable"
+    "build:ts": "tsc -p tsconfig.electron.json",
+    "build:copy": "copyfiles electron/renderer/* dist/electron/renderer -u 1",
+    "electron:dev": "npm run build:ts && npm run build:copy && electron .",
+    "electron:build": "npm run build:ts && npm run build:copy && electron-builder",
+    "electron:build:portable": "npm run build:ts && npm run build:copy && electron-builder --win portable",
+    "prebuild": "npm run build:ts && npm run build:copy"
   },
   "build": {
     "appId": "com.example.automation",
@@ -19,6 +22,7 @@
     ],
     "extraFiles": [],
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "portable",
@@ -27,6 +31,13 @@
           ]
         }
       ]
+    },
+    "mac": {
+      "icon": "build/icon.icns"
+    },
+    "linux": {
+      "icon": "build/icon.png",
+      "category": "Development"
     }
   },
   "dependencies": {
@@ -36,6 +47,7 @@
   "devDependencies": {
     "@playwright/test": "^1.59.1",
     "@types/node": "^25.6.0",
+    "copyfiles": "^2.4.1",
     "electron": "^41.3.0",
     "electron-builder": "^26.8.1",
     "typescript": "^6.0.3"

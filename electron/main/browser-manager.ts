@@ -5,11 +5,22 @@ import { app } from 'electron';
 import extract from 'extract-zip';
 
 // Playwright 浏览器版本信息
-const BROWSER_INFO = {
-  revision: 1217,
-  version: '147.0.7727.15',
-  url: 'https://cdn.playwright.dev/builds/cft/147.0.7727.15/win64/chrome-win64.zip',
-};
+// 使用环境变量或默认值，便于在不同环境中配置
+function getBrowserInfo() {
+  const revision = process.env.PLAYWRIGHT_CHROMIUM_REVISION
+    ? parseInt(process.env.PLAYWRIGHT_CHROMIUM_REVISION, 10)
+    : 1217;
+
+  const version = process.env.PLAYWRIGHT_CHROMIUM_VERSION || '147.0.7727.15';
+
+  return {
+    revision,
+    version,
+    getUrl: () => `https://cdn.playwright.dev/builds/cft/${version}/win64/chrome-win64.zip`,
+  };
+}
+
+const BROWSER_INFO = getBrowserInfo();
 
 // 本地 Playwright Chromium 路径
 function getPlaywrightChromePath(): string | null {
@@ -46,7 +57,8 @@ function downloadBrowser(onProgress: (pct: number) => void): Promise<string> {
     onProgress(0);
 
     const file = fs.createWriteStream(zipPath);
-    https.get(BROWSER_INFO.url, (response) => {
+    const downloadUrl = BROWSER_INFO.getUrl();
+    https.get(downloadUrl, (response) => {
       const totalSize = parseInt(response.headers['content-length'] || '0', 10);
       let downloaded = 0;
 
