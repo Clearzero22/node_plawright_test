@@ -46,10 +46,19 @@
     }
     .log-entry { color: #a8d8ea; }
     .log-entry:last-child { color: #fff; }
+    .status-bar {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 12px;
+      padding: 8px;
+      background: #16213e;
+      border-radius: 6px;
+    }
   </style>
 </head>
 <body>
   <h1>浏览器自动化</h1>
+  <div class="status-bar" id="browser-status">检测中...</div>
   <div class="btn-group">
     <button id="btn-chromium">运行 Chromium Demo</button>
     <button id="btn-chrome" class="btn-secondary">运行本地 Chrome Demo</button>

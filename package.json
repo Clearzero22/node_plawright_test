@@ -4,14 +4,34 @@
   "main": "dist/electron/main/index.js",
   "scripts": {
     "electron:dev": "npx tsc -p tsconfig.electron.json && node -e \"const fs=require('fs'),path=require('path');fs.readdirSync('electron/renderer').forEach(f=>fs.copyFileSync(path.join('electron/renderer',f),path.join('dist/electron/renderer',f)))\" && electron .",
-    "electron:build": "electron-builder"
+    "electron:build": "npx tsc -p tsconfig.electron.json && node -e \"const fs=require('fs'),path=require('path');fs.readdirSync('electron/renderer').forEach(f=>fs.copyFileSync(path.join('electron/renderer',f),path.join('dist/electron/renderer',f)))\" && electron-builder",
+    "electron:build:portable": "npx tsc -p tsconfig.electron.json && node -e \"const fs=require('fs'),path=require('path');fs.readdirSync('electron/renderer').forEach(f=>fs.copyFileSync(path.join('electron/renderer',f),path.join('dist/electron/renderer',f)))\" && electron-builder --win portable"
   },
   "build": {
     "appId": "com.example.automation",
     "productName": "Browser Automation",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "node_modules/**/*"
+    ],
+    "extraFiles": [],
     "win": {
-      "target": "portable"
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
     }
+  },
+  "dependencies": {
+    "extract-zip": "^2.0.1",
+    "playwright": "^1.59.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",

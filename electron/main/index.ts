@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import { chromium } from 'playwright';
 import path from 'path';
+import { BrowserManager } from './browser-manager';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -26,10 +27,31 @@ app.on('window-all-closed', () => {
 });
 
 // 自动化配置
-const TASKS: Record<string, { channel?: string, url: string }> = {
+const TASKS: Record<string, { channel?: string, executablePath?: string, url: string }> = {
   'chromium': { url: 'https://www.bilibili.com/' },
   'chrome':   { channel: 'chrome', url: 'https://www.bilibili.com/' },
 };
+
+// IPC: 检测浏览器可用性
+ipcMain.handle('check-browser', async () => {
+  return {
+    hasLocalChrome: BrowserManager.hasLocalChrome(),
+    hasPlaywrightChromium: !!BrowserManager.getPlaywrightChromePath(),
+  };
+});
+
+// IPC: 下载 Chromium
+ipcMain.handle('download-chromium', async () => {
+  if (!mainWindow) return { success: false, error: 'No window' };
+
+  return new Promise((resolve) => {
+    BrowserManager.downloadBrowser((pct) => {
+      mainWindow?.webContents.send('automation-log', `下载进度: ${pct}%`);
+    })
+      .then((dir) => resolve({ success: true, dir }))
+      .catch((err) => resolve({ success: false, error: err.message }));
+  });
+});
 
 // IPC: 渲染进程点击按钮 → 主进程直接执行 Playwright
 ipcMain.handle('run-automation', async (_event, key: string) => {
@@ -46,6 +68,21 @@ ipcMain.handle('run-automation', async (_event, key: string) => {
     return { success: false, error: `Unknown task: ${key}` };
   }
 
+  // 如果是 chromium 模式且没有本地 Playwright Chromium，自动下载
+  if (key === 'chromium') {
+    const pwPath = BrowserManager.getPlaywrightChromePath();
+    if (pwPath) {
+      task.executablePath = pwPath;
+    } else {
+      log('未检测到 Playwright Chromium，正在下载...');
+      const dl = await BrowserManager.downloadBrowser((pct) => {
+        mainWindow?.webContents.send('automation-log', `下载进度: ${pct}%`);
+      });
+      log('下载完成');
+      task.executablePath = path.join(dl, 'chrome-win64', 'chrome.exe');
+    }
+  }
+
   let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null;
 
   try {
@@ -53,6 +90,7 @@ ipcMain.handle('run-automation', async (_event, key: string) => {
     browser = await chromium.launch({
       headless: false,
       channel: task.channel,
+      executablePath: task.executablePath,
     });
     const page = await browser.newPage();
 
