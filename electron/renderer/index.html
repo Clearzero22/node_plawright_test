@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>浏览器自动化</title>
+  <title>浏览器自动化 - User Data Dir</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -15,11 +15,17 @@
       height: 100vh;
       padding: 24px;
     }
-    h1 { font-size: 20px; margin-bottom: 16px; color: #e94560; }
+    h1 { font-size: 20px; margin-bottom: 8px; color: #e94560; }
+    .subtitle {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 16px;
+    }
     .btn-group {
       display: flex;
       gap: 8px;
       margin-bottom: 16px;
+      flex-wrap: wrap;
     }
     button {
       padding: 10px 20px;
@@ -34,6 +40,9 @@
     button:hover { opacity: 0.85; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-secondary { background: #0f3460; border: 1px solid #e94560; }
+    .btn-success { background: #16c784; }
+    .btn-warning { background: #f59e0b; }
+    .btn-danger { background: #dc2626; }
     .log-box {
       flex: 1;
       background: #0f3460;
@@ -43,8 +52,9 @@
       font-family: 'Consolas', monospace;
       font-size: 13px;
       line-height: 1.6;
+      min-height: 200px;
     }
-    .log-entry { color: #a8d8ea; }
+    .log-entry { color: #a8d8ea; margin-bottom: 4px; }
     .log-entry:last-child { color: #fff; }
     .status-bar {
       font-size: 12px;
@@ -54,15 +64,81 @@
       background: #16213e;
       border-radius: 6px;
     }
+    .info-box {
+      background: #16213e;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 13px;
+    }
+    .info-label { color: #888; }
+    .info-value { color: #16c784; font-weight: 500; }
+    .divider {
+      height: 1px;
+      background: #0f3460;
+      margin: 16px 0;
+    }
+    .feature-list {
+      background: #0f3460;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+    .feature-list h3 {
+      color: #e94560;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .feature-list ul {
+      margin-left: 20px;
+    }
+    .feature-list li {
+      margin-bottom: 4px;
+      color: #a8d8ea;
+    }
   </style>
 </head>
 <body>
-  <h1>浏览器自动化</h1>
+  <h1>🤖 浏览器自动化</h1>
+  <div class="subtitle">使用 User Data Dir 实现状态持久化</div>
+
   <div class="status-bar" id="browser-status">检测中...</div>
-  <div class="btn-group">
-    <button id="btn-chromium">运行 Chromium Demo</button>
-    <button id="btn-chrome" class="btn-secondary">运行本地 Chrome Demo</button>
+
+  <div class="feature-list">
+    <h3>✨ 核心特性</h3>
+    <ul>
+      <li>✅ 使用您的真实 Chrome 浏览器数据</li>
+      <li>✅ 自动保持登录状态（无需手动保存）</li>
+      <li>✅ 支持浏览器扩展和密码填充</li>
+      <li>✅ 与正常浏览体验完全一致</li>
+    </ul>
   </div>
+
+  <div class="info-box" id="user-data-info">
+    <div class="info-item">
+      <span class="info-label">📁 用户数据目录:</span>
+      <span class="info-value">加载中...</span>
+    </div>
+  </div>
+
+  <div class="btn-group">
+    <button id="btn-bilibili" class="btn-success">📺 Bilibili</button>
+    <button id="btn-taobao" class="btn-success">🛒 Taobao</button>
+    <button id="btn-chrome" class="btn-secondary">🌐 默认页面</button>
+  </div>
+
+  <div class="btn-group">
+    <button id="btn-clear-data" class="btn-danger">🗑️ 清除用户数据</button>
+  </div>
+
+  <div class="divider"></div>
+
   <div class="log-box" id="logs"></div>
 
   <script src="app.js"></script>
