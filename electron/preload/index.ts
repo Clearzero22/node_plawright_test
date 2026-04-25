@@ -2,7 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('automation', {
   // 运行自动化任务
-  run: (key: string) => ipcRenderer.invoke('run-automation', key),
+  run: (key: string, browserType?: 'chrome' | 'chromium') =>
+    ipcRenderer.invoke('run-automation', key, browserType),
 
   // 检查浏览器可用性
   checkBrowser: () => ipcRenderer.invoke('check-browser'),
