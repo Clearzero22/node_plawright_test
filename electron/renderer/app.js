@@ -1,5 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
   const runBtnChatGPT = document.getElementById('btn-chatgpt');
+  const runBtnSellerSpriteCn = document.getElementById('btn-seller-sprite-cn');
+  const runBtnSellerSprite = document.getElementById('btn-seller-sprite');
+  const runBtnXiyouzhaoci = document.getElementById('btn-xiyouzhaoci');
   const runBtnBilibili = document.getElementById('btn-bilibili');
   const runBtnTaobao = document.getElementById('btn-taobao');
   const runBtnChrome = document.getElementById('btn-chrome');
@@ -24,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function setButtons(disabled) {
-    [runBtnChatGPT, runBtnBilibili, runBtnTaobao, runBtnChrome, clearDataBtn].forEach(btn => {
+    [runBtnChatGPT, runBtnSellerSpriteCn, runBtnSellerSprite, runBtnXiyouzhaoci, runBtnBilibili, runBtnTaobao, runBtnChrome, clearDataBtn].forEach(btn => {
       if (btn) btn.disabled = disabled;
     });
   }
@@ -176,6 +179,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ChatGPT 按钮
   runBtnChatGPT.addEventListener('click', () => runAutomation('chatgpt', 'ChatGPT'));
+
+  // Seller Sprite 中文版按钮
+  runBtnSellerSpriteCn.addEventListener('click', () => runAutomation('seller-sprite-cn', 'Seller Sprite 中文版'));
+
+  // Seller Sprite 国际版按钮
+  runBtnSellerSprite.addEventListener('click', () => runAutomation('seller-sprite', 'Seller Sprite 国际版'));
+  // xiyouzhaoci 按钮
+  runBtnXiyouzhaoci.addEventListener('click', () => runAutomation('xiyouzhaoci', 'xiyouzhaoci'));
+
 
   // Bilibili 按钮
   runBtnBilibili.addEventListener('click', () => runAutomation('bilibili', 'Bilibili'));

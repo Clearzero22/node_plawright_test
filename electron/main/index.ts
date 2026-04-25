@@ -42,6 +42,21 @@ const TASKS: Record<string, {
     channel: 'chrome',
     useUserDataDir: true,
   },
+  'seller-sprite-cn': {
+    url: 'https://www.sellersprite.com/cn/',
+    channel: 'chrome',
+    useUserDataDir: true,
+  },
+  'seller-sprite': {
+    url: 'https://www.sellersprite.com/',
+    channel: 'chrome',
+    useUserDataDir: true,
+  },
+  'xiyouzhaoci': {
+    url: 'https://www.xiyouzhaoci.com/',
+    channel: 'chrome',
+    useUserDataDir: true,
+  },
   'bilibili': {
     url: 'https://www.bilibili.com/',
     channel: 'chrome',
@@ -311,6 +326,16 @@ async function checkLoginStatus(page: any, url: string): Promise<boolean> {
       const avatar = await page.$('[data-testid="profile-button"], .avatar');
       const loginButton = await page.$('[data-testid="login-button"], a[href*="/login"]');
       return !!avatar && !loginButton;
+    } else if (url.includes('sellersprite.com')) {
+      // Seller Sprite 登录检测：检查是否存在用户信息或登录按钮
+      const userMenu = await page.$('.user-dropdown, .user-info, [class*="user"], [class*="account"]');
+      const loginButton = await page.$('a[href*="login"], a[href*="signin"], .btn-login');
+      return !!userMenu && !loginButton;
+    } else if (url.includes('xiyouzhaoci.com')) {
+      // xiyouzhaoci 登录检测：检查是否存在用户信息或登录按钮
+      const userInfo = await page.$('.user-info, .member-info, [class*="user"], [class*="member"]');
+      const loginButton = await page.$('a[href*="login"], a[href*="signin"], .btn-login');
+      return !!userInfo && !loginButton;
     } else if (url.includes('bilibili.com')) {
       const avatar = await page.$('.nav-user-info, .header-avatar-wrap');
       return !!avatar;
