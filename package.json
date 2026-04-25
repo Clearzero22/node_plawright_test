@@ -1,14 +1,23 @@
 {
   "name": "node_plawright_test",
   "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {},
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "main": "dist/electron/main/index.js",
+  "scripts": {
+    "electron:dev": "npx tsc -p tsconfig.electron.json && node -e \"const fs=require('fs'),path=require('path');fs.readdirSync('electron/renderer').forEach(f=>fs.copyFileSync(path.join('electron/renderer',f),path.join('dist/electron/renderer',f)))\" && electron .",
+    "electron:build": "electron-builder"
+  },
+  "build": {
+    "appId": "com.example.automation",
+    "productName": "Browser Automation",
+    "win": {
+      "target": "portable"
+    }
+  },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
-    "@types/node": "^25.6.0"
+    "@types/node": "^25.6.0",
+    "electron": "^41.3.0",
+    "electron-builder": "^26.8.1",
+    "typescript": "^6.0.3"
   }
 }

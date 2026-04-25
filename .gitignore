@@ -10,3 +10,7 @@ node_modules/
 # Output
 /output/
 *.png
+
+# Compiled
+/dist/
+/*.js

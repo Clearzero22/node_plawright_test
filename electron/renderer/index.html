@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>浏览器自动化</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      padding: 24px;
+    }
+    h1 { font-size: 20px; margin-bottom: 16px; color: #e94560; }
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      background: #e94560;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.85; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: #0f3460; border: 1px solid #e94560; }
+    .log-box {
+      flex: 1;
+      background: #0f3460;
+      border-radius: 8px;
+      padding: 12px;
+      overflow-y: auto;
+      font-family: 'Consolas', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .log-entry { color: #a8d8ea; }
+    .log-entry:last-child { color: #fff; }
+  </style>
+</head>
+<body>
+  <h1>浏览器自动化</h1>
+  <div class="btn-group">
+    <button id="btn-chromium">运行 Chromium Demo</button>
+    <button id="btn-chrome" class="btn-secondary">运行本地 Chrome Demo</button>
+  </div>
+  <div class="log-box" id="logs"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
