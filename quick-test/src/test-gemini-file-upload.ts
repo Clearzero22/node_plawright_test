@@ -40,17 +40,29 @@ async function testGeminiFileUpload() {
 
     try {
       // 使用精确的 CSS 选择器定位+号按钮
-      log('查找上传按钮...', 'info');
+      log('步骤1: 点击+号按钮打开菜单...', 'info');
 
       const uploadButton = page.locator('uploader >> button >> .mat-mdc-button-touch-target');
 
       await uploadButton.waitFor({ state: 'visible', timeout: 10000 });
-      log('✅ 找到上传按钮', 'success');
+      log('✅ 找到+号按钮', 'success');
+
+      await uploadButton.click();
+      log('✅ 已点击+号按钮', 'success');
+      await sleep(1000);
+
+      // 步骤2: 点击弹出菜单中的"上传文件"按钮
+      log('步骤2: 点击菜单中的"上传文件"...', 'info');
+
+      const uploadMenuItem = page.locator('[data-test-id="local-images-files-uploader-button"]');
+
+      await uploadMenuItem.waitFor({ state: 'visible', timeout: 5000 });
+      log('✅ 找到上传文件菜单项', 'success');
 
       // 点击触发文件选择
       const [fileChooser] = await Promise.all([
         page.waitForEvent('filechooser', { timeout: 10000 }),
-        uploadButton.click()
+        uploadMenuItem.click()
       ]);
 
       await fileChooser.setFiles(imagePath);
