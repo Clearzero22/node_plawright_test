@@ -5,6 +5,7 @@
   "scripts": {
     "build": "tsc",
     "test:chatgpt": "tsx src/test-chatgpt.ts",
+    "test:chatgpt:upload": "tsx src/test-chatgpt-upload.ts",
     "test:seller-cn": "tsx src/test-seller-sprite-cn.ts",
     "test:seller-int": "tsx src/test-seller-sprite-int.ts",
     "test:xiyouzhaoci": "tsx src/test-xiyouzhaoci.ts",
