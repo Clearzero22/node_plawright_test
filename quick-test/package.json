@@ -13,6 +13,8 @@
     "test:all": "tsx src/test-all-sequential.ts",
     "test:multi-pages": "tsx src/test-multi-pages.ts",
     "test:parallel-ops": "tsx src/test-parallel-operations.ts",
+    "test:gigab2b": "tsx src/test-gigab2b.ts",
+    "test:gigab2b:clean": "tsx src/test-gigab2b-clean.ts",
     "test:parallel": "tsx src/test-all-parallel.ts",
     "generate": "tsx src/generate.ts",
     "dev": "tsx"
