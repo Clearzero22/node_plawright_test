@@ -30,7 +30,7 @@ async function testGeminiFileUpload() {
     });
 
     log('✅ 页面加载完成', 'success');
-    await sleep(3000);
+    await sleep(5000); // 增加等待时间，确保页面完全加载
 
     // 上传文件
     log('\n📤 上传文件...', 'info');
@@ -39,45 +39,25 @@ async function testGeminiFileUpload() {
     let fileUploaded = false;
 
     try {
-      // 点击工具按钮旁边的"+"号按钮
-      log('点击+号按钮打开上传菜单...', 'info');
+      // 使用精确的 CSS 选择器定位+号按钮
+      log('查找上传按钮...', 'info');
 
-      // 查找包含+号的按钮
-      const plusButton = page.locator('button').filter({ hasText: '+' });
+      const uploadButton = page.locator('uploader >> button >> .mat-mdc-button-touch-target');
 
-      if (await plusButton.count() > 0) {
-        log(`找到 ${await plusButton.count()} 个+号按钮`, 'info');
+      await uploadButton.waitFor({ state: 'visible', timeout: 10000 });
+      log('✅ 找到上传按钮', 'success');
 
-        // 点击第一个+号按钮
-        await plusButton.first().click();
-        log('✅ 已点击+号按钮', 'success');
-        await sleep(1000);
+      // 点击触发文件选择
+      const [fileChooser] = await Promise.all([
+        page.waitForEvent('filechooser', { timeout: 10000 }),
+        uploadButton.click()
+      ]);
 
-        // 现在应该弹出上传菜单，点击上传选项
-        const uploadOption = page.locator('button').filter({ hasText: /上传|Upload/ }).or(
-          page.locator('[role="menuitem"]').filter({ hasText: /上传|Upload|文件|File/ })
-        );
+      await fileChooser.setFiles(imagePath);
+      log(`✅ 文件已上传: ${imagePath}`, 'success');
+      fileUploaded = true;
+      await sleep(2000);
 
-        const uploadCount = await uploadOption.count();
-        log(`找到 ${uploadCount} 个上传选项`, 'info');
-
-        if (uploadCount > 0) {
-          // 触发文件选择
-          const [fileChooser] = await Promise.all([
-            page.waitForEvent('filechooser', { timeout: 10000 }),
-            uploadOption.first().click()
-          ]);
-
-          await fileChooser.setFiles(imagePath);
-          log(`✅ 文件已上传: ${imagePath}`, 'success');
-          fileUploaded = true;
-          await sleep(2000);
-        } else {
-          log('未找到上传选项', 'warning');
-        }
-      } else {
-        log('未找到+号按钮', 'warning');
-      }
     } catch (error) {
       log('上传失败: ' + (error as Error).message, 'warning');
     }
