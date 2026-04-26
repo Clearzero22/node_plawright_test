@@ -19,3 +19,6 @@ quick-test/output/
 # Build output
 /release/
 dist/
+
+# Windows shortcuts
+*.lnk
