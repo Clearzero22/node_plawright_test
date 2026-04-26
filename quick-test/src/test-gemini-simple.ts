@@ -37,19 +37,10 @@ async function testGeminiSimple() {
       await textbox.fill(prompt);
       log(`✅ 文本已输入: ${prompt}`, 'success');
       await sleep(1000);
-    } catch (error) {
-      log('❌ 输入失败: ' + (error as Error).message, 'error');
-    }
 
-    // 点击发送按钮
-    log('\n📤 点击发送...', 'info');
-
-    try {
-      // 使用 mat-mdc-button 和 touch-target 来定位发送按钮
-      const sendButton = page.locator('button:has(.mat-mdc-button-touch-target)').filter({ hasText: 'Send message' }).or(
-        page.locator('button').filter({ has: page.locator('.mat-mdc-button-touch-target') }).filter({ hasText: 'Send' })
-      );
-      await sendButton.first().click();
+      // 使用回车键发送消息
+      log('\n📤 按回车键发送...', 'info');
+      await textbox.press('Enter');
       log('✅ 消息已发送', 'success');
     } catch (error) {
       log('❌ 发送失败: ' + (error as Error).message, 'error');
