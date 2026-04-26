@@ -24,7 +24,8 @@ async function testGigaB2B() {
     const page = await getPageFromContext(context);
 
     // const productUrl = 'https://www.gigab2b.com/index.php?route=product/product&product_id=747431';
-        const productUrl = 'https://www.gigab2b.com/index.php?route=product/product&product_id=747431';
+        
+    const productUrl = 'https://www.gigab2b.com/index.php?route=product/product&product_id=747431';
 
     log(`📦 直接访问产品页面: ${productUrl}`, 'info');
 
