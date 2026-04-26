@@ -1,0 +1,23 @@
+{
+  "name": "quick-test",
+  "version": "1.0.0",
+  "description": "Quick testing scripts for browser automation",
+  "scripts": {
+    "build": "tsc",
+    "test:chatgpt": "tsx src/test-chatgpt.ts",
+    "test:seller-cn": "tsx src/test-seller-sprite-cn.ts",
+    "test:seller-int": "tsx src/test-seller-sprite-int.ts",
+    "test:xiyouzhaoci": "tsx src/test-xiyouzhaoci.ts",
+    "test:bilibili": "tsx src/test-bilibili.ts",
+    "test:taobao": "tsx src/test-taobao.ts",
+    "test:all": "tsx src/test-all-sequential.ts",
+    "test:multi-pages": "tsx src/test-multi-pages.ts",
+    "test:parallel-ops": "tsx src/test-parallel-operations.ts",
+    "test:parallel": "tsx src/test-all-parallel.ts",
+    "generate": "tsx src/generate.ts",
+    "dev": "tsx"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0"
+  }
+}
