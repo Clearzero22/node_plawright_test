@@ -12,6 +12,7 @@
     "test:amazon:search": "tsx src/test-amazon-search.ts",
     "test:amazon:product": "tsx src/test-amazon-product.ts",
     "test:amazon:complete": "tsx src/test-amazon-product-complete.ts",
+    "test:amazon:multiple": "tsx src/test-amazon-multiple-products.ts",
     "test:seller-cn": "tsx src/test-seller-sprite-cn.ts",
     "test:seller-int": "tsx src/test-seller-sprite-int.ts",
     "test:xiyouzhaoci": "tsx src/test-xiyouzhaoci.ts",

@@ -100,7 +100,9 @@ async function testAmazonProductComplete() {
     // 使用独立profile避免与正在运行的Chrome冲突
         // const context = await launchPersistent('amazon-test-profile');
 
-    const context = await launchPersistent('amazon-test-profile');
+    // const context = await launchPersistent('amazon-test-profile');
+    // 
+    const context = await launchPersistent();
     const page = await getPageFromContext(context);
 
     // 指定要抓取的产品链接
