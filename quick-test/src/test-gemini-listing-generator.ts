@@ -175,7 +175,8 @@ async function testGeminiListingGenerator() {
     log(`💾 提示词已保存: ${promptPath}`, 'info');
 
     // 3. 启动浏览器
-    const context = await launchPersistent('gemini-listing-profile');
+    const context = await launchPersistent();
+    // const context = await launchPersistent(`gemini-listing-${Date.now()}`);
     const page = await getPageFromContext(context);
 
     // 4. 访问 Gemini
@@ -203,14 +204,29 @@ async function testGeminiListingGenerator() {
         try {
           log(`上传图片: ${path.basename(imagePath)}`, 'info');
 
-          const uploadButton = page.getByRole('button', { name: 'Open upload file menu' });
-          await uploadButton.waitFor({ state: 'visible', timeout: 5000 });
+          // 使用两步上传流程（参考 test-gemini-file-upload.ts）
+          log('步骤1: 点击+号按钮打开菜单...', 'info');
+          const uploadButton = page.locator('uploader >> button >> .mat-mdc-button-touch-target');
+          await uploadButton.waitFor({ state: 'visible', timeout: 10000 });
+          log('✅ 找到+号按钮', 'success');
+
           await uploadButton.click();
-          await sleep(500);
+          log('✅ 已点击+号按钮', 'success');
+          await sleep(1000);
 
-          const fileChooser = await page.waitForEvent('filechooser', { timeout: 10000 });
+          // 步骤2: 点击弹出菜单中的"上传文件"按钮
+          log('步骤2: 点击菜单中的"上传文件"...', 'info');
+          const uploadMenuItem = page.locator('[data-test-id="local-images-files-uploader-button"]');
+          await uploadMenuItem.waitFor({ state: 'visible', timeout: 5000 });
+          log('✅ 找到上传文件菜单项', 'success');
+
+          // 点击触发文件选择
+          const [fileChooser] = await Promise.all([
+            page.waitForEvent('filechooser', { timeout: 10000 }),
+            uploadMenuItem.click()
+          ]);
+
           await fileChooser.setFiles(imagePath);
-
           log(`✅ 图片已上传`, 'success');
           uploadedCount++;
           await sleep(1500);
@@ -226,33 +242,31 @@ async function testGeminiListingGenerator() {
     log('\n✍️  输入提示词...', 'info');
 
     try {
-      const textbox = page.getByRole('textbox', { name: 'Enter a prompt for Gemini' });
-      const paragraph = textbox.getByRole('paragraph');
+      // 使用中文role名称（与浏览器语言环境匹配）
+      const textbox = page.getByRole('textbox', { name: '为 Gemini 输入提示' });
 
-      await paragraph.click();
-      await paragraph.click();
+      // 等待输入框可见
+      await textbox.waitFor({ state: 'visible', timeout: 10000 });
+      log('✅ 找到输入框', 'success');
+
+      await textbox.click();
       await sleep(500);
 
-      // 分段输入长文本以避免超时
-      const maxChunkSize = 3000;
-      for (let i = 0; i < prompt.length; i += maxChunkSize) {
-        const chunk = prompt.substring(i, Math.min(i + maxChunkSize, prompt.length));
-        await page.keyboard.type(chunk);
-        await sleep(200);
-      }
-
+      // 直接使用 fill 方法填充文本（比 keyboard.type 快得多）
+      await textbox.fill(prompt);
       log(`✅ 提示词已输入 (${prompt.length} 字符)`, 'success');
       await sleep(1000);
     } catch (error) {
       log('❌ 输入提示词失败: ' + (error as Error).message, 'error');
+      console.error(error);
     }
 
-    // 7. 发送消息
+    // 7. 发送消息（使用回车键）
     log('\n📤 发送消息...', 'info');
 
     try {
-      const sendButton = page.getByRole('button', { name: 'Send message' });
-      await sendButton.click();
+      // 使用回车键发送（更可靠）
+      await page.keyboard.press('Enter');
       log('✅ 消息已发送', 'success');
     } catch (error) {
       log('❌ 发送失败: ' + (error as Error).message, 'error');
