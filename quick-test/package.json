@@ -9,6 +9,7 @@
     "test:gemini": "tsx src/test-gemini-upload.ts",
     "test:gemini:simple": "tsx src/test-gemini-simple.ts",
     "test:gemini:upload": "tsx src/test-gemini-file-upload.ts",
+    "test:amazon:search": "tsx src/test-amazon-search.ts",
     "test:seller-cn": "tsx src/test-seller-sprite-cn.ts",
     "test:seller-int": "tsx src/test-seller-sprite-int.ts",
     "test:xiyouzhaoci": "tsx src/test-xiyouzhaoci.ts",
