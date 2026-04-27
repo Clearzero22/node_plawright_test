@@ -11,6 +11,7 @@
     "test:gemini:upload": "tsx src/test-gemini-file-upload.ts",
     "test:gemini:listing": "tsx src/test-gemini-listing-generator.ts",
     "test:gemini:listing:multi": "tsx src/test-gemini-listing-multi-images.ts",
+    "test:doubao:listing": "tsx src/test-doubao-listing-generator.ts",
     "test:amazon:search": "tsx src/test-amazon-search.ts",
     "test:amazon:product": "tsx src/test-amazon-product.ts",
     "test:amazon:complete": "tsx src/test-amazon-product-complete.ts",
