@@ -22,55 +22,73 @@ interface CompleteProductDetails {
   price: string;
   colors: string[];
   bulletPoints: string[];
-  productInfo: Record<string, string>;
   longDescription: string;
-  specifications: {
-    style?: string;
-    color?: string;
-    shape?: string;
-    tableDesign?: string;
-    styleName?: string;
-    theme?: string;
-    furnitureFinish?: string;
-    legStyle?: string;
-    topColor?: string;
-    baseColor?: string;
-    itemDimensions?: string;
-    itemWeight?: string;
-    size?: string;
-    tabletopThickness?: string;
-    itemWidth?: string;
-    maximumLiftingHeight?: string;
-    frameMaterialType?: string;
-    topMaterialType?: string;
-    materialType?: string;
-    productCareInstructions?: string;
-    isStainResistant?: string;
-    modelName?: string;
-    includedComponents?: string;
-    modelNumber?: string;
-    manufacturer?: string;
-    manufacturerPartNumber?: string;
-    specialFeatures?: string;
-    maximumWeightRecommendation?: string;
-    recommendedUsesForProduct?: string;
-    indoorOutdoorUsage?: string;
-    specificUsesForProduct?: string;
-    toolsRecommendedForAssembly?: string;
-    includesAllAssemblyTools?: string;
-    baseType?: string;
-    minimumRequiredDoorWidth?: string;
-    tableExtensionMechanism?: string;
-    isFoldable?: string;
-    numberOfItems?: string;
-    isCustomizable?: string;
-    isResizable?: string;
-  };
   rating: string;
   reviewCount: string;
   bestSellersRank: string[];
   images: string[];
   timestamp: string;
+  // 分层的产品信息结构
+  productInfo: {
+    style?: {
+      color?: string;
+      shape?: string;
+      tableDesign?: string;
+      styleName?: string;
+      theme?: string;
+      furnitureFinish?: string;
+      legStyle?: string;
+      topColor?: string;
+      baseColor?: string;
+    };
+    measurements?: {
+      itemDimensions?: string;
+      itemWeight?: string;
+      size?: string;
+      tabletopThickness?: string;
+      itemWidth?: string;
+      maximumLiftingHeight?: string;
+      itemDimensions?: string;
+      extendedLength?: string;
+    };
+    materialsAndCare?: {
+      frameMaterialType?: string;
+      topMaterialType?: string;
+      productCareInstructions?: string;
+      isStainResistant?: string;
+      materialType?: string;
+    };
+    itemDetails?: {
+      brandName?: string;
+      modelName?: string;
+      includedComponents?: string;
+      modelNumber?: string;
+      itemWidth?: string;
+      specialFeatures?: string;
+      manufacturer?: string;
+      manufacturerPartNumber?: string;
+      bestSellersRank?: string;
+      asin?: string;
+    };
+    userGuide?: {
+      maximumWeightRecommendation?: string;
+      recommendedUsesForProduct?: string;
+      indoorOutdoorUsage?: string;
+      specificUsesForProduct?: string;
+      toolsRecommendedForAssembly?: string;
+      includesAllAssemblyTools?: string;
+    };
+    featuresAndSpecs?: {
+      baseType?: string;
+      minimumRequiredDoorWidth?: string;
+      tableExtensionMechanism?: string;
+      isFoldable?: string;
+      numberOfItems?: string;
+      tilting?: string;
+      isCustomizable?: string;
+      isResizable?: string;
+    };
+  };
 }
 
 async function testAmazonProductComplete() {
@@ -79,7 +97,10 @@ async function testAmazonProductComplete() {
   log('='.repeat(60), 'info');
 
   try {
-    const context = await launchPersistent();
+    // 使用独立profile避免与正在运行的Chrome冲突
+        // const context = await launchPersistent('amazon-test-profile');
+
+    const context = await launchPersistent('amazon-test-profile');
     const page = await getPageFromContext(context);
 
     // 指定要抓取的产品链接
@@ -224,6 +245,9 @@ async function testAmazonProductComplete() {
       });
 
       // 6. 抓取所有产品规格信息（从展开的表格中）
+      // 先收集到临时对象
+      const flatProductInfo: { [key: string]: string } = {};
+
       const specTables = document.querySelectorAll('#productDetails_feature_div table.prodDetTable');
       specTables.forEach(table => {
         const rows = table.querySelectorAll('tr');
@@ -233,7 +257,7 @@ async function testAmazonProductComplete() {
             const key = cells[0].textContent?.trim();
             const val = cells[1].textContent?.trim();
             if (key && val && !key.includes('Details') && !key.includes('Specifications')) {
-              details.productInfo[key] = val;
+              flatProductInfo[key] = val;
             }
           }
         });
@@ -250,59 +274,90 @@ async function testAmazonProductComplete() {
             const labelText = label.textContent?.trim();
             const valueText = value.textContent?.trim();
             if (labelText && valueText) {
-              details.productInfo[labelText] = valueText;
+              flatProductInfo[labelText] = valueText;
             }
           }
         });
       });
 
-      // 映射到特定字段
-      const fieldMapping: Record<string, keyof CompleteProductDetails['specifications']> = {
-        'Style': 'style',
-        'Color': 'color',
-        'Shape': 'shape',
-        'Table Design': 'tableDesign',
-        'Style Name': 'styleName',
-        'Theme': 'theme',
-        'Furniture Finish': 'furnitureFinish',
-        'Leg Style': 'legStyle',
-        'Top Color': 'topColor',
-        'Base Color': 'baseColor',
-        'Item Dimensions D x W x H': 'itemDimensions',
-        'Item Weight': 'itemWeight',
-        'Size': 'size',
-        'Tabletop Thickness': 'tabletopThickness',
-        'Item Width': 'itemWidth',
-        'Maximum Lifting Height': 'maximumLiftingHeight',
-        'Frame Material Type': 'frameMaterialType',
-        'Top Material Type': 'topMaterialType',
-        'Material Type': 'materialType',
-        'Product Care Instructions': 'productCareInstructions',
-        'Is Stain Resistant': 'isStainResistant',
-        'Model Name': 'modelName',
-        'Included Components': 'includedComponents',
-        'Model Number': 'modelNumber',
-        'Manufacturer': 'manufacturer',
-        'Manufacturer Part Number': 'manufacturerPartNumber',
-        'Special Features': 'specialFeatures',
-        'Maximum Weight Recommendation': 'maximumWeightRecommendation',
-        'Recommended Uses For Product': 'recommendedUsesForProduct',
-        'Indoor/Outdoor Usage': 'indoorOutdoorUsage',
-        'Specific Uses For Product': 'specificUsesForProduct',
-        'Tools Recommended For Assembly': 'toolsRecommendedForAssembly',
-        'Includes All Assembly Tools': 'includesAllAssemblyTools',
-        'Base Type': 'baseType',
-        'Minimum Required Door Width': 'minimumRequiredDoorWidth',
-        'Table Extension Mechanism': 'tableExtensionMechanism',
-        'Is Foldable': 'isFoldable',
-        'Number of Items': 'numberOfItems',
-        'Is Customizable?': 'isCustomizable',
-        'Is the item resizable?': 'isResizable'
+      // 按照分组分类数据
+      const categoryMapping: { [key: string]: string } = {
+        // Style 分组
+        'Color': 'style',
+        'Shape': 'style',
+        'Table Design': 'style',
+        'Style Name': 'style',
+        'Theme': 'style',
+        'Furniture Finish': 'style',
+        'Leg Style': 'style',
+        'Top Color': 'style',
+        'Base Color': 'style',
+
+        // Measurements 分组
+        'Item Dimensions D x W x H': 'measurements',
+        'Item Weight': 'measurements',
+        'Size': 'measurements',
+        'Tabletop Thickness': 'measurements',
+        'Item Width': 'measurements',
+        'Maximum Lifting Height': 'measurements',
+        'Item Dimensions': 'measurements',
+        'Extended Length': 'measurements',
+
+        // Materials & Care 分组
+        'Frame Material Type': 'materialsAndCare',
+        'Top Material Type': 'materialsAndCare',
+        'Product Care Instructions': 'materialsAndCare',
+        'Is Stain Resistant': 'materialsAndCare',
+        'Material Type': 'materialsAndCare',
+
+        // Item Details 分组
+        'Brand Name': 'itemDetails',
+        'Model Name': 'itemDetails',
+        'Included Components': 'itemDetails',
+        'Model Number': 'itemDetails',
+        'Item Width': 'itemDetails',
+        'Special Features': 'itemDetails',
+        'Manufacturer': 'itemDetails',
+        'Manufacturer Part Number': 'itemDetails',
+        'Best Sellers Rank': 'itemDetails',
+        'ASIN': 'itemDetails',
+
+        // User Guide 分组
+        'Maximum Weight Recommendation': 'userGuide',
+        'Recommended Uses For Product': 'userGuide',
+        'Indoor/Outdoor Usage': 'userGuide',
+        'Specific Uses For Product': 'userGuide',
+        'Tools Recommended For Assembly': 'userGuide',
+        'Includes All Assembly Tools': 'userGuide',
+
+        // Features & Specs 分组
+        'Base Type': 'featuresAndSpecs',
+        'Minimum Required Door Width': 'featuresAndSpecs',
+        'Table Extension Mechanism': 'featuresAndSpecs',
+        'Is Foldable': 'featuresAndSpecs',
+        'Number of Items': 'featuresAndSpecs',
+        'Tilting': 'featuresAndSpecs',
+        'Is Customizable?': 'featuresAndSpecs',
+        'Is the item resizable?': 'featuresAndSpecs'
       };
 
-      Object.entries(fieldMapping).forEach(([key, field]) => {
-        if (details.productInfo[key]) {
-          details.specifications[field] = details.productInfo[key];
+      // 初始化分层结构
+      details.productInfo = {
+        style: {},
+        measurements: {},
+        materialsAndCare: {},
+        itemDetails: {},
+        userGuide: {},
+        featuresAndSpecs: {}
+      };
+
+      // 按照分类映射数据（从 flatProductInfo 到嵌套结构）
+      Object.entries(flatProductInfo).forEach(([key, value]) => {
+        const category = categoryMapping[key];
+        if (category && details.productInfo[category]) {
+          // 转换键名为驼峰命名
+          const camelKey = key.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '').replace(/\s+/g, '-');
+          (details.productInfo[category] as { [key: string]: string })[camelKey] = value;
         }
       });
 
@@ -395,9 +450,26 @@ async function testAmazonProductComplete() {
       log(`${index + 1}. ${point}`, 'info');
     });
 
-    log(`\n📐 规格参数:`, 'info');
-    Object.entries(productDetails.specifications).forEach(([key, value]) => {
-      if (value) log(`  ${key}: ${value}`, 'info');
+    // 显示分层的产品信息
+    log(`\n📐 产品信息 (Product Information):`, 'info');
+
+    const categories = [
+      { key: 'style', label: 'Style' },
+      { key: 'measurements', label: 'Measurements' },
+      { key: 'materialsAndCare', label: 'Materials & Care' },
+      { key: 'itemDetails', label: 'Item Details' },
+      { key: 'userGuide', label: 'User Guide' },
+      { key: 'featuresAndSpecs', label: 'Features & Specs' }
+    ];
+
+    categories.forEach(({ key, label }) => {
+      const categoryData = productDetails.productInfo[key];
+      if (categoryData && Object.keys(categoryData).length > 0) {
+        log(`\n  ${label}:`, 'info');
+        Object.entries(categoryData).forEach(([k, v]) => {
+          if (v) log(`    ${k}: ${v}`, 'info');
+        });
+      }
     });
 
     if (productDetails.bestSellersRank.length > 0) {
@@ -450,14 +522,21 @@ ASIN: ${productDetails.asin}
 --------
 ${productDetails.bulletPoints.map((point, i) => `${i + 1}. ${point}`).join('\n\n')}
 
-产品规格参数
+产品信息 (Product Information)
 --------
-${Object.entries(productDetails.specifications).map(([key, value]) => `${key}: ${value}`).join('\n')}
-
-所有产品信息
---------
-${Object.entries(productDetails.productInfo).map(([key, value]) => `${key}: ${value}`).join('\n')}
 `;
+
+    // 输出分层结构到TXT
+    categories.forEach(({ key, label }) => {
+      const categoryData = productDetails.productInfo[key];
+      if (categoryData && Object.keys(categoryData).length > 0) {
+        txtContent += `\n${label}:\n`;
+        Object.entries(categoryData).forEach(([k, v]) => {
+          if (v) txtContent += `  ${k}: ${v}\n`;
+        });
+      }
+    });
+
 
     if (productDetails.bestSellersRank.length > 0) {
       txtContent += `\n销售排名\n--------\n${productDetails.bestSellersRank.join('\n')}\n`;
@@ -483,7 +562,19 @@ ${productDetails.longDescription}
     log(`✅ 品牌: ${productDetails.brand || '未找到'}`, 'success');
     log(`✅ 颜色选项: ${productDetails.colors.length} 个`, 'success');
     log(`✅ 五点描述: ${productDetails.bulletPoints.length} 个`, 'success');
-    log(`✅ 规格参数: ${Object.keys(productDetails.specifications).length} 个`, 'success');
+
+    // 统计各分类的参数数量
+    let totalSpecs = 0;
+    categories.forEach(({ key, label }) => {
+      const categoryData = productDetails.productInfo[key];
+      const count = categoryData ? Object.keys(categoryData).length : 0;
+      if (count > 0) {
+        log(`✅ ${label}: ${count} 个`, 'success');
+        totalSpecs += count;
+      }
+    });
+
+    log(`✅ 总规格参数: ${totalSpecs} 个`, 'success');
     log(`✅ 长描述: ${productDetails.longDescription.length > 0 ? '已获取' : '未找到'}`, 'success');
 
     await new Promise(() => {});
