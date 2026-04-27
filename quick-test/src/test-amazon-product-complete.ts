@@ -223,30 +223,34 @@ async function testAmazonProductComplete() {
         }
       });
 
-      // 6. 抓取产品规格参数（Product Information 表格）
-      const specTable = document.querySelector('#productDetails_techSpec_section_1, #productDetails_detailBullets_sections_1');
-      if (specTable) {
-        const rows = specTable.querySelectorAll('tr, .prodDetSectionEntry');
+      // 6. 抓取所有产品规格信息（从展开的表格中）
+      const specTables = document.querySelectorAll('#productDetails_feature_div table.prodDetTable');
+      specTables.forEach(table => {
+        const rows = table.querySelectorAll('tr');
         rows.forEach(row => {
-          const label = row.querySelector('th, .prodDetSectionEntryLabel')?.textContent?.trim();
-          const value = row.querySelector('td, .prodDetSectionEntryValue')?.textContent?.trim();
-          if (label && value) {
-            details.productInfo[label] = value;
-          }
-        });
-      }
-
-      // 抓取详细规格（Product information, Measurements, Materials & Care 等）
-      const detailSections = document.querySelectorAll('[data-feature-name="productDetails"] table, .techSpecSection table, #productDetails_db_tables');
-      detailSections.forEach(section => {
-        const rows = section.querySelectorAll('tr');
-        rows.forEach(row => {
-          const cells = row.querySelectorAll('td, th');
+          const cells = row.querySelectorAll('th, td');
           if (cells.length >= 2) {
             const key = cells[0].textContent?.trim();
             const val = cells[1].textContent?.trim();
             if (key && val && !key.includes('Details') && !key.includes('Specifications')) {
               details.productInfo[key] = val;
+            }
+          }
+        });
+      });
+
+      // 额外抓取所有 prodDetTable（确保不遗漏）
+      const allTables = document.querySelectorAll('.prodDetTable');
+      allTables.forEach(table => {
+        const rows = table.querySelectorAll('tr');
+        rows.forEach(row => {
+          const label = row.querySelector('.prodDetSectionEntry');
+          const value = row.querySelector('.prodDetAttrValue');
+          if (label && value) {
+            const labelText = label.textContent?.trim();
+            const valueText = value.textContent?.trim();
+            if (labelText && valueText) {
+              details.productInfo[labelText] = valueText;
             }
           }
         });
