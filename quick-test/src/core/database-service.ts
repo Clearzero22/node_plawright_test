@@ -156,6 +156,27 @@ export class DatabaseService {
     return result.rows.map(this._mapProduct);
   }
 
+  async getProductsByRun(runId: string): Promise<ProductRecord[]> {
+    const result = await this.pool.query(
+      'SELECT * FROM clean_products WHERE run_id = $1 ORDER BY ingested_at DESC',
+      [runId],
+    );
+    return result.rows.map(this._mapProduct);
+  }
+
+  async getStats(): Promise<{ runs: number; products: number; aiResults: number }> {
+    const [runs, products, aiResults] = await Promise.all([
+      this.pool.query('SELECT COUNT(*)::int as count FROM crawler_runs'),
+      this.pool.query('SELECT COUNT(*)::int as count FROM clean_products'),
+      this.pool.query('SELECT COUNT(*)::int as count FROM ai_recognition_results'),
+    ]);
+    return {
+      runs: runs.rows[0].count,
+      products: products.rows[0].count,
+      aiResults: aiResults.rows[0].count,
+    };
+  }
+
   // ─── 映射 ──────────────────────────────────────────────────
 
   private _mapRun(row: any): CrawlerRun {
@@ -219,13 +240,19 @@ export class DatabaseService {
     return res.rows[0].id;
   }
 
-  async getAiResults(runId: string): Promise<any[]> {
+  async getAiResults(runId?: string, limit = 50): Promise<any[]> {
+    if (runId) {
+      const res = await this.pool.query(
+        `SELECT id, run_id, node_id, image_url, template_id, prompt, result, model, status, error, recognized_at
+         FROM ai_recognition_results WHERE run_id = $1 ORDER BY id LIMIT $2`,
+        [runId, limit],
+      );
+      return res.rows;
+    }
     const res = await this.pool.query(
       `SELECT id, run_id, node_id, image_url, template_id, prompt, result, model, status, error, recognized_at
-       FROM ai_recognition_results
-       WHERE run_id = $1
-       ORDER BY id`,
-      [runId],
+       FROM ai_recognition_results ORDER BY id DESC LIMIT $1`,
+      [limit],
     );
     return res.rows;
   }

@@ -27,6 +27,7 @@ import { cors } from 'hono/cors';
 import { CrawlerService } from './services/crawler-service';
 import { AiVisionService, PROMPT_TEMPLATES } from './services/ai-vision-service';
 import { AmazonSearchService } from './services/amazon-search-service';
+import { AmazonProductService } from './services/amazon-product-service';
 import { DatabaseService } from './core/database-service';
 
 // ─── 配置 ────────────────────────────────────────────────────
@@ -385,6 +386,198 @@ app.post('/api/search/amazon', async (c) => {
   }
 });
 
+// ─── POST /api/scrape/amazon-product ────────────────────────
+
+app.post('/api/scrape/amazon-product', async (c) => {
+  let body: { asin?: string; url?: string; headless?: boolean; saveToDb?: boolean };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ success: false, error: '请求体必须是 JSON' }, 400);
+  }
+
+  if (!body.asin && !body.url) {
+    return c.json({ success: false, error: '缺少必填字段: asin 或 url（至少提供一个）' }, 400);
+  }
+
+  const headless = body.headless !== false;
+  const saveToDb = body.saveToDb !== false;
+
+  // Optional DB persistence
+  let db: DatabaseService | null = null;
+  if (saveToDb) {
+    db = createDb();
+    try { await db!.connect(); } catch { db = null; }
+  }
+
+  const startTime = Date.now();
+  const runId = `ap-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const service = new AmazonProductService();
+
+  try {
+    const product = await service.scrape({
+      asin: body.asin,
+      url: body.url,
+      headless,
+    });
+    const duration = Date.now() - startTime;
+
+    // Persist to DB
+    if (db) {
+      await db.insertRun({
+        runId,
+        source: 'amazon-product',
+        status: 'completed',
+        startedAt: new Date(startTime).toISOString(),
+        completedAt: new Date().toISOString(),
+        itemsScraped: 1,
+        errors: 0,
+        params: { asin: body.asin || '', url: body.url || '' },
+      });
+      await db.upsertProduct({
+        source: 'amazon-product',
+        runId,
+        url: product.url,
+        externalId: product.asin,
+        title: product.title,
+        price: product.price ? product.price.replace(/[^0-9.]/g, '') || undefined : undefined,
+        currency: 'USD',
+        description: [product.bulletPoints.join('\n'), product.longDescription].filter(Boolean).join('\n\n'),
+        images: product.images,
+        specifications: product.specifications,
+        scrapedAt: product.timestamp,
+      });
+    }
+
+    return c.json({ success: true, runId, duration, product });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return c.json({ success: false, error: message }, 500);
+  } finally {
+    await service.close();
+    if (db) await db.disconnect();
+  }
+});
+
+// ─── GET /api/db/stats ───────────────────────────────────────
+
+app.get('/api/db/stats', async (c) => {
+  const db = createDb();
+  if (!db) return c.json({ success: false, error: '数据库不可用' }, 503);
+  try {
+    await db.connect();
+    const stats = await db.getStats();
+    return c.json({ success: true, ...stats });
+  } catch (error) {
+    return c.json({ success: false, error: error instanceof Error ? error.message : '查询失败' }, 500);
+  } finally {
+    await db.disconnect();
+  }
+});
+
+// ─── GET /api/db/runs ───────────────────────────────────────
+
+app.get('/api/db/runs', async (c) => {
+  const db = createDb();
+  if (!db) return c.json({ success: false, error: '数据库不可用' }, 503);
+  const limit = Math.min(Number(c.req.query('limit')) || 50, 200);
+  try {
+    await db.connect();
+    const runs = await db.listRuns(limit);
+    return c.json({ success: true, runs });
+  } catch (error) {
+    return c.json({ success: false, error: error instanceof Error ? error.message : '查询失败' }, 500);
+  } finally {
+    await db.disconnect();
+  }
+});
+
+// ─── GET /api/db/products ───────────────────────────────────
+
+app.get('/api/db/products', async (c) => {
+  const db = createDb();
+  if (!db) return c.json({ success: false, error: '数据库不可用' }, 503);
+  const limit = Math.min(Number(c.req.query('limit')) || 50, 200);
+  try {
+    await db.connect();
+    const products = await db.getProducts(undefined, limit);
+    return c.json({ success: true, products });
+  } catch (error) {
+    return c.json({ success: false, error: error instanceof Error ? error.message : '查询失败' }, 500);
+  } finally {
+    await db.disconnect();
+  }
+});
+
+// ─── GET /api/db/ai-results ─────────────────────────────────
+
+app.get('/api/db/ai-results', async (c) => {
+  const db = createDb();
+  if (!db) return c.json({ success: false, error: '数据库不可用' }, 503);
+  const limit = Math.min(Number(c.req.query('limit')) || 50, 200);
+  const runId = c.req.query('runId');
+  try {
+    await db.connect();
+    const results = await db.getAiResults(runId || undefined, limit);
+    return c.json({ success: true, results });
+  } catch (error) {
+    return c.json({ success: false, error: error instanceof Error ? error.message : '查询失败' }, 500);
+  } finally {
+    await db.disconnect();
+  }
+});
+
+// ─── GET /api/db/runs/:runId/products ────────────────────────
+
+app.get('/api/db/runs/:runId/products', async (c) => {
+  const db = createDb();
+  if (!db) return c.json({ success: false, error: '数据库不可用' }, 503);
+  const runId = c.req.param('runId');
+  try {
+    await db.connect();
+    const products = await db.getProductsByRun(runId);
+    return c.json({ success: true, products });
+  } catch (error) {
+    return c.json({ success: false, error: error instanceof Error ? error.message : '查询失败' }, 500);
+  } finally {
+    await db.disconnect();
+  }
+});
+
+// ─── GET /api/db/runs/:runId/raw ────────────────────────────
+
+app.get('/api/db/runs/:runId/raw', async (c) => {
+  const db = createDb();
+  if (!db) return c.json({ success: false, error: '数据库不可用' }, 503);
+  const runId = c.req.param('runId');
+  try {
+    await db.connect();
+    const raw = await db.getRawByRun(runId);
+    return c.json({ success: true, raw: raw.map(r => ({ id: r.id, url: r.url, content: r.content, fetchedAt: r.fetched_at })) });
+  } catch (error) {
+    return c.json({ success: false, error: error instanceof Error ? error.message : '查询失败' }, 500);
+  } finally {
+    await db.disconnect();
+  }
+});
+
+// ─── GET /api/db/runs/:runId/staging ─────────────────────────
+
+app.get('/api/db/runs/:runId/staging', async (c) => {
+  const db = createDb();
+  if (!db) return c.json({ success: false, error: '数据库不可用' }, 503);
+  const runId = c.req.param('runId');
+  try {
+    await db.connect();
+    const staging = await db.getStagingByRun(runId);
+    return c.json({ success: true, staging: staging.map(s => ({ id: s.id, source: s.source, data: s.data, parsedAt: s.parsed_at })) });
+  } catch (error) {
+    return c.json({ success: false, error: error instanceof Error ? error.message : '查询失败' }, 500);
+  } finally {
+    await db.disconnect();
+  }
+});
+
 // ─── 全局错误处理 ────────────────────────────────────────────
 
 app.onError((err, c) => {
@@ -408,6 +601,7 @@ serve(
     console.log(`     POST /api/ai/compare`);
     console.log(`     GET  /api/ai/templates`);
     console.log(`     GET  /api/ai/results`);
-    console.log(`     POST /api/search/amazon\n`);
+    console.log(`     POST /api/search/amazon`);
+    console.log(`     POST /api/scrape/amazon-product\n`);
   }
 );
