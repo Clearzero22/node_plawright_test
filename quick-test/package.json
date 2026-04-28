@@ -31,6 +31,10 @@
     "dev": "tsx"
   },
   "devDependencies": {
+    "@types/pg": "^8.20.0",
     "tsx": "^4.21.0"
+  },
+  "dependencies": {
+    "pg": "^8.20.0"
   }
 }
