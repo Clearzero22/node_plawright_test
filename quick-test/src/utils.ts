@@ -2,9 +2,14 @@ import { chromium, Browser, BrowserContext, Page } from 'playwright';
 import path from 'path';
 import os from 'os';
 
-// 获取用户数据目录（与Electron应用保持一致）
-export function getUserDataDir(profileName: string = 'chromium-profile'): string {
-  const userDataDir = path.join(os.homedir(), 'AppData', 'Roaming', 'node_plawright_test', profileName);
+// 获取用户数据目录
+export function getUserDataDir(profileName?: string): string {
+  if (process.platform === 'darwin') {
+    // macOS: 直接使用本机 Chrome 的 Default profile
+    return path.join(os.homedir(), 'Library', 'Application Support', 'Google', 'Chrome', profileName || 'Default');
+  }
+  // Windows: 使用项目本地持久化目录
+  const userDataDir = path.join(os.homedir(), 'AppData', 'Roaming', 'node_plawright_test', profileName || 'chromium-profile');
   return userDataDir;
 }
 

@@ -28,6 +28,8 @@
     "test:gigab2b:clean": "tsx src/test-gigab2b-clean.ts",
     "test:parallel": "tsx src/test-all-parallel.ts",
     "generate": "tsx src/generate.ts",
+    "api": "tsx src/api-server.ts",
+    "api:dev": "tsx watch src/api-server.ts",
     "dev": "tsx"
   },
   "devDependencies": {
@@ -35,6 +37,10 @@
     "tsx": "^4.21.0"
   },
   "dependencies": {
+    "@hono/node-server": "^2.0.0",
+    "dotenv": "^17.4.2",
+    "hono": "^4.12.15",
+    "openai": "^6.34.0",
     "pg": "^8.20.0"
   }
 }

@@ -227,9 +227,10 @@ async function testGigaB2B() {
         });
 
         // 点击查看大图
-        await firstImage.click();
+        // await firstImage.click();
         await sleep(1000);
 
+        
         // 点击图片查看器遮罩
         const mask = page.locator('.el-image-viewer__mask');
         if (await mask.isVisible()) {
