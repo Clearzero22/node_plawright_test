@@ -68,6 +68,25 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
     prompt: '这是一张电商商品图片。请提炼商品的核心卖点，以简洁的列表形式输出，每条不超过20个字。',
   },
   {
+    id: 'extract-search-keywords',
+    label: '提取搜索关键词',
+    description: '提取适合 Amazon 搜索的英文关键词',
+    prompt: `这是一张电商商品图片。请分析图片中的商品，输出适合在 Amazon 上搜索该商品的英文关键词。
+
+要求：
+1. 用英文输出
+2. 给出 3-5 组关键词，从短到长排列
+3. 包含核心产品词 + 材质 + 用途/场景
+4. 每组关键词一行，不要序号，不要解释
+
+示例输出格式：
+bamboo side table
+c-shaped sofa side table
+adjustable bamboo couch tray table
+bamboo bed table with cup holder
+多功能 c 形沙发边桌`,
+  },
+  {
     id: 'ocr',
     label: 'OCR 文字提取',
     description: '提取图中所有文字',
@@ -126,9 +145,15 @@ export class AiVisionService {
     const prompt = template?.prompt || promptOrTemplateId;
     const effectiveModel = model || template?.model || this.model;
 
-    const imageUrl = imageInput.startsWith('http') || imageInput.startsWith('data:')
-      ? imageInput
-      : this.imageToBase64(imageInput);
+    // URL 图片在服务端下载转 Base64，避免 DashScope 无法访问外部链接
+    let imageUrl: string;
+    if (imageInput.startsWith('data:')) {
+      imageUrl = imageInput;
+    } else if (imageInput.startsWith('http')) {
+      imageUrl = await this.downloadToBase64(imageInput);
+    } else {
+      imageUrl = this.imageToBase64(imageInput);
+    }
 
     const completion = await this.client.chat.completions.create({
       model: effectiveModel,
@@ -157,12 +182,17 @@ export class AiVisionService {
     const effectiveModel = model || template?.model || QWEN_VL_MODELS.max;
 
     const content = await Promise.all(
-      imageInputs.map(async (img) => ({
-        type: 'image_url' as const,
-        image_url: {
-          url: img.startsWith('http') || img.startsWith('data:') ? img : this.imageToBase64(img),
-        },
-      })),
+      imageInputs.map(async (img) => {
+        let url: string;
+        if (img.startsWith('data:')) {
+          url = img;
+        } else if (img.startsWith('http')) {
+          url = await this.downloadToBase64(img);
+        } else {
+          url = this.imageToBase64(img);
+        }
+        return { type: 'image_url' as const, image_url: { url } };
+      }),
     );
 
     content.push({ type: 'text', text: prompt });
@@ -176,6 +206,17 @@ export class AiVisionService {
   }
 
   // ─── 工具方法 ─────────────────────────────────────────────
+
+  /** 下载远程图片并转为 Base64 */
+  private async downloadToBase64(url: string): Promise<string> {
+    const resp = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    if (!resp.ok) throw new Error(`下载图片失败: HTTP ${resp.status}`);
+
+    const contentType = resp.headers.get('content-type') || 'image/jpeg';
+    const ext = contentType.split('/')[1] || 'jpeg';
+    const buffer = Buffer.from(await resp.arrayBuffer());
+    return `data:image/${ext};base64,${buffer.toString('base64')}`;
+  }
 
   private imageToBase64(imagePath: string): string {
     const absolutePath = path.resolve(imagePath);

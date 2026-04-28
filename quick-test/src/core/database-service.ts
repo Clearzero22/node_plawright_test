@@ -187,4 +187,46 @@ export class DatabaseService {
       scrapedAt: row.scraped_at,
     };
   }
+
+  // ─── AI Recognition Results ─────────────────────────────────
+
+  async insertAiResult(params: {
+    runId?: string;
+    nodeId: string;
+    imageUrl?: string;
+    templateId?: string;
+    prompt?: string;
+    result: string;
+    model?: string;
+    status?: 'success' | 'failed';
+    error?: string;
+  }): Promise<number> {
+    const res = await this.pool.query(
+      `INSERT INTO ai_recognition_results (run_id, node_id, image_url, template_id, prompt, result, model, status, error)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+      [
+        params.runId || null,
+        params.nodeId,
+        params.imageUrl || null,
+        params.templateId || null,
+        params.prompt || null,
+        params.result,
+        params.model || null,
+        params.status || 'success',
+        params.error || null,
+      ],
+    );
+    return res.rows[0].id;
+  }
+
+  async getAiResults(runId: string): Promise<any[]> {
+    const res = await this.pool.query(
+      `SELECT id, run_id, node_id, image_url, template_id, prompt, result, model, status, error, recognized_at
+       FROM ai_recognition_results
+       WHERE run_id = $1
+       ORDER BY id`,
+      [runId],
+    );
+    return res.rows;
+  }
 }

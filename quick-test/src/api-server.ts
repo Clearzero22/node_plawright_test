@@ -10,9 +10,11 @@
  *   POST /api/crawl/gigab2b   — 执行 GigaB2B 爬虫
  *   GET  /api/runs            — 运行记录列表
  *   GET  /api/runs/:id        — 单次运行详情
- *   POST /api/ai/recognize    — AI 图片识别（支持 templateId / 自定义 prompt）
+ *   POST /api/ai/recognize    — AI 图片识别（支持 templateId / 自定义 prompt，可选存库）
  *   POST /api/ai/compare      — AI 多图对比
  *   GET  /api/ai/templates    — 获取预设提示词模板列表
+ *   GET  /api/ai/results      — 查询 AI 识别结果（?runId=xxx）
+ *   POST /api/search/amazon   — Amazon 竞品搜索
  *
  * 工作流编辑器通过 Vite proxy 调用:
  *   vite.config.ts → server.proxy: { '/api': 'http://localhost:3456' }
@@ -24,6 +26,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { CrawlerService } from './services/crawler-service';
 import { AiVisionService, PROMPT_TEMPLATES } from './services/ai-vision-service';
+import { AmazonSearchService } from './services/amazon-search-service';
 import { DatabaseService } from './core/database-service';
 
 // ─── 配置 ────────────────────────────────────────────────────
@@ -232,7 +235,10 @@ app.post('/api/ai/recognize', async (c) => {
     return c.json({ success: false, error: 'DASHSCOPE_API_KEY 未配置' }, 503);
   }
 
-  let body: { image?: string; prompt?: string; templateId?: string; model?: string };
+  let body: {
+    image?: string; prompt?: string; templateId?: string; model?: string;
+    runId?: string; nodeId?: string;
+  };
   try {
     body = await c.req.json();
   } catch {
@@ -243,15 +249,81 @@ app.post('/api/ai/recognize', async (c) => {
     return c.json({ success: false, error: '缺少必填字段: image（URL 或 Base64）' }, 400);
   }
 
-  // templateId 优先于 prompt；如果都没有则用默认
   const promptOrTemplate = body.templateId || body.prompt || 'general';
+
+  // 可选连接 DB 持久化
+  let db: DatabaseService | null = null;
+  if (body.runId) {
+    db = createDb();
+    try { await db!.connect(); } catch { db = null; }
+  }
 
   try {
     const result = await vision.recognize(body.image, promptOrTemplate, body.model);
+
+    // 存库
+    if (db && body.nodeId) {
+      await db.insertAiResult({
+        runId: body.runId,
+        nodeId: body.nodeId,
+        imageUrl: body.image,
+        templateId: body.templateId || undefined,
+        prompt: body.prompt || undefined,
+        result,
+        model: body.model || 'qwen3.6-flash',
+        status: 'success',
+      });
+    }
+
     return c.json({ success: true, result });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+
+    // 失败也存库
+    if (db && body.nodeId) {
+      await db.insertAiResult({
+        runId: body.runId,
+        nodeId: body.nodeId,
+        imageUrl: body.image,
+        templateId: body.templateId || undefined,
+        prompt: body.prompt || undefined,
+        result: message,
+        model: body.model || 'qwen3.6-flash',
+        status: 'failed',
+        error: message,
+      });
+    }
+
     return c.json({ success: false, error: message }, 500);
+  } finally {
+    if (db) await db.disconnect();
+  }
+});
+
+// ─── GET /api/ai/results ──────────────────────────────────────
+
+app.get('/api/ai/results', async (c) => {
+  const runId = c.req.query('runId');
+  if (!runId) {
+    return c.json({ success: false, error: '缺少参数: runId' }, 400);
+  }
+
+  const db = createDb();
+  if (!db) {
+    return c.json({ success: false, error: '数据库不可用' }, 503);
+  }
+
+  try {
+    await db.connect();
+    const results = await db.getAiResults(runId);
+    return c.json({ success: true, results });
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : '查询失败',
+    }, 500);
+  } finally {
+    await db.disconnect();
   }
 });
 
@@ -285,6 +357,34 @@ app.post('/api/ai/compare', async (c) => {
   }
 });
 
+// ─── POST /api/search/amazon ─────────────────────────────────
+
+app.post('/api/search/amazon', async (c) => {
+  let body: { keyword?: string; maxResults?: number };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ success: false, error: '请求体必须是 JSON' }, 400);
+  }
+
+  if (!body.keyword || typeof body.keyword !== 'string') {
+    return c.json({ success: false, error: '缺少必填字段: keyword' }, 400);
+  }
+
+  const maxResults = Math.min(Number(body.maxResults) || 20, 48);
+  const service = new AmazonSearchService();
+
+  try {
+    const result = await service.search(body.keyword, maxResults);
+    return c.json({ success: true, ...result });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return c.json({ success: false, error: message }, 500);
+  } finally {
+    await service.close();
+  }
+});
+
 // ─── 全局错误处理 ────────────────────────────────────────────
 
 app.onError((err, c) => {
@@ -306,6 +406,8 @@ serve(
     console.log(`     GET  /api/runs/:id`);
     console.log(`     POST /api/ai/recognize`);
     console.log(`     POST /api/ai/compare`);
-    console.log(`     GET  /api/ai/templates\n`);
+    console.log(`     GET  /api/ai/templates`);
+    console.log(`     GET  /api/ai/results`);
+    console.log(`     POST /api/search/amazon\n`);
   }
 );

@@ -63,3 +63,21 @@ CREATE TABLE IF NOT EXISTS clean_products (
 
 CREATE INDEX idx_clean_source ON clean_products(source);
 CREATE INDEX idx_clean_external_id ON clean_products(external_id);
+
+-- ─── AI 识别结果 ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS ai_recognition_results (
+  id             SERIAL PRIMARY KEY,
+  run_id         TEXT,
+  node_id        TEXT NOT NULL,
+  image_url      TEXT,
+  template_id    TEXT,
+  prompt         TEXT,
+  result         TEXT NOT NULL,
+  model          TEXT,
+  status         TEXT NOT NULL DEFAULT 'success'
+                 CHECK (status IN ('success','failed')),
+  error          TEXT,
+  recognized_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_ai_results_run ON ai_recognition_results(run_id);
