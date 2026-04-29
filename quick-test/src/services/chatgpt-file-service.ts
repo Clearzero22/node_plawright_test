@@ -95,7 +95,8 @@ export class ChatGPTFileService {
       this.ownProcess = spawn(chromePath, args, {
         detached: true,
         stdio: 'ignore',
-        shell: os.platform() === 'win32',  // Windows 需要 shell 来执行 .exe 路径
+        shell: false,
+        windowsHide: true,
       });
       this.ownProcess.unref();
 
