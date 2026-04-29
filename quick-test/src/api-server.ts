@@ -31,6 +31,7 @@ import { AmazonProductService } from './services/amazon-product-service';
 import { DatabaseService } from './core/database-service';
 import * as xiyouzhaociService from './services/xiyouzhaociService';
 import { GeminiFileService } from './services/gemini-file-service';
+import { ChatGPTFileService } from './services/chatgpt-file-service';
 
 // ─── 配置 ────────────────────────────────────────────────────
 
@@ -679,6 +680,53 @@ app.post('/api/gemini/upload', async (c) => {
   }
 });
 
+// ─── POST /api/chatgpt/upload ─────────────────────────────────────────
+
+app.post('/api/chatgpt/upload', async (c) => {
+  try {
+    const { filePath, prompt, headless = true, responseTimeout = 60000 } = await c.req.json();
+
+    if (!filePath || typeof filePath !== 'string') {
+      return c.json(
+        { success: false, error: 'filePath is required and must be a string' },
+        400,
+      );
+    }
+
+    if (!prompt || typeof prompt !== 'string') {
+      return c.json(
+        { success: false, error: 'prompt is required and must be a string' },
+        400,
+      );
+    }
+
+    console.log(`[API] ChatGPT file upload request: ${filePath}`);
+
+    const service = new ChatGPTFileService();
+    const result = await service.upload({
+      filePath,
+      prompt,
+      headless,
+      responseTimeout,
+    });
+
+    return c.json(result);
+  } catch (error) {
+    console.error('[API] ChatGPT file upload error:', error);
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    return c.json(
+      {
+        success: false,
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? String(error) : undefined,
+      },
+      500,
+    );
+  }
+});
+
 // ─── 全局错误处理 ────────────────────────────────────────────
 
 app.onError((err, c) => {
@@ -705,6 +753,7 @@ serve(
     console.log(`     POST /api/search/amazon`);
     console.log(`     POST /api/scrape/amazon-product`);
     console.log(`     POST /api/keywords/xiyouzhaoci`);
-    console.log(`     POST /api/gemini/upload\n`);
+    console.log(`     POST /api/gemini/upload`);
+    console.log(`     POST /api/chatgpt/upload\n`);
   }
 );

@@ -21,7 +21,7 @@ export class AmazonSearchService {
 
   async search(keyword: string, maxResults = 20): Promise<SearchResult> {
     // ⚠️ 重要：统一使用共享的浏览器数据目录
-    const userDataDir = path.join(os.homedir(), '.node-plawright-test', 'chrome-profile', 'automation');
+    const userDataDir = path.join(os.homedir(), '.node-plawright-test', 'chrome-profile', 'file-upload');
 
     this.browser = await chromium.launchPersistentContext(userDataDir, {
       headless: true,
