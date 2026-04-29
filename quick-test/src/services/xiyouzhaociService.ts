@@ -113,71 +113,75 @@ async function scrapeAsin(
   page: Page,
   asin: string,
 ): Promise<{ keywords: ScrapedKeyword[]; csvData: string }> {
-  console.log(`[${asin}] Navigating to xiyouzhaoci.com...`);
-  await page.goto('https://www.xiyouzhaoci.com/asin', {
-    waitUntil: 'networkidle',
-  });
-  console.log(`[${asin}] Page loaded: ${await page.title()}`);
+  try {
+    console.log(`[${asin}] Navigating to xiyouzhaoci.com...`);
+    // ⚠️ 重要：移除 waitUntil: 'networkidle'，使用默认的 'load' 策略
+    await page.goto('https://www.xiyouzhaoci.com/asin');
+    console.log(`[${asin}] Page loaded: ${await page.title()}`);
 
-  // Wait for page load
-  await page.waitForTimeout(5000);
+    // Wait for page load
+    await page.waitForTimeout(5000);
 
-  // Find ASIN input and enter ASIN
-  console.log(`[${asin}] Looking for ASIN input field...`);
-  const asinInput = page.locator('input[placeholder*="子ASIN"]');
-  await asinInput.waitFor({ state: 'visible', timeout: 10000 });
-  await asinInput.click();
-  await asinInput.fill('');
-  await asinInput.type(asin, { delay: 100 });
-  await asinInput.press('Enter');
-  console.log(`[${asin}] ASIN submitted, waiting for results...`);
+    // Find ASIN input and enter ASIN
+    console.log(`[${asin}] Looking for ASIN input field...`);
+    const asinInput = page.locator('input[placeholder*="子ASIN"]');
+    await asinInput.waitFor({ state: 'visible', timeout: 10000 });
+    await asinInput.click();
+    await asinInput.fill('');
+    await asinInput.type(asin, { delay: 100 });
+    await asinInput.press('Enter');
+    console.log(`[${asin}] ASIN submitted, waiting for results...`);
 
-  // Wait for search results - INCREASED WAIT TIME
-  await page.waitForTimeout(5000);
+    // Wait for search results - 减少等待时间，与工作版本保持一致
+    await page.waitForTimeout(2000);
 
-  // Check if there are any results
-  const noResults = await page.locator('text=搜索无结果').isVisible().catch(() => false);
-  if (noResults) {
-    console.log(`[${asin}] No results found for this ASIN`);
+    // Check if there are any results
+    const noResults = await page.locator('text=搜索无结果').isVisible().catch(() => false);
+    if (noResults) {
+      console.log(`[${asin}] No results found for this ASIN`);
+      return { keywords: [], csvData: '' };
+    }
+
+    // Scroll to find and click "select all" checkbox
+    console.log(`[${asin}] Looking for select-all checkbox...`);
+    const checkBlock = page.locator('.check_block').first();
+    for (let i = 0; i < 20; i++) {
+      if (await checkBlock.isVisible({ timeout: 500 }).catch(() => false)) {
+        console.log(`[${asin}] Found checkbox after ${i} scrolls`);
+        break;
+      }
+      await page.mouse.wheel(0, 300);
+      await page.waitForTimeout(500);
+    }
+
+    await checkBlock.waitFor({ state: 'visible', timeout: 10000 });
+    await checkBlock.click();
+    console.log(`[${asin}] Selected all rows`);
+    await page.waitForTimeout(2000);
+
+    // Extract table data
+    console.log(`[${asin}] Extracting table data...`);
+    const tableData = await extractTableData(page);
+    console.log(`[${asin}] Extracted ${tableData.split('\n').length} lines from table`);
+
+    // Parse CSV
+    const keywords: ScrapedKeyword[] = [];
+    const lines = tableData.trim().split('\n');
+
+    for (const line of lines) {
+      const parsed = parseCsvLine(line);
+      if (parsed && parsed.keyword && !parsed.keyword.includes('月')) {
+        // Filter out header rows like "1月,1月,2月..."
+        keywords.push(parsed);
+      }
+    }
+
+    console.log(`[${asin}] Parsed ${keywords.length} valid keywords`);
+    return { keywords, csvData: tableData };
+  } catch (error) {
+    console.error(`[${asin}] Error during scraping:`, error);
     return { keywords: [], csvData: '' };
   }
-
-  // Scroll to find and click "select all" checkbox
-  console.log(`[${asin}] Looking for select-all checkbox...`);
-  const checkBlock = page.locator('.check_block').first();
-  for (let i = 0; i < 20; i++) {
-    if (await checkBlock.isVisible({ timeout: 500 }).catch(() => false)) {
-      console.log(`[${asin}] Found checkbox after ${i} scrolls`);
-      break;
-    }
-    await page.mouse.wheel(0, 300);
-    await page.waitForTimeout(500);
-  }
-
-  await checkBlock.waitFor({ state: 'visible', timeout: 10000 });
-  await checkBlock.click();
-  console.log(`[${asin}] Selected all rows`);
-  await page.waitForTimeout(2000);
-
-  // Extract table data
-  console.log(`[${asin}] Extracting table data...`);
-  const tableData = await extractTableData(page);
-  console.log(`[${asin}] Extracted ${tableData.split('\n').length} lines from table`);
-
-  // Parse CSV
-  const keywords: ScrapedKeyword[] = [];
-  const lines = tableData.trim().split('\n');
-
-  for (const line of lines) {
-    const parsed = parseCsvLine(line);
-    if (parsed && parsed.keyword && !parsed.keyword.includes('月')) {
-      // Filter out header rows like "1月,1月,2月..."
-      keywords.push(parsed);
-    }
-  }
-
-  console.log(`[${asin}] Parsed ${keywords.length} valid keywords`);
-  return { keywords, csvData: tableData };
 }
 
 /**

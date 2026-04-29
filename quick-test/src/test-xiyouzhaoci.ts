@@ -9,7 +9,7 @@ async function test() {
     log('✅ 浏览器已启动（持久化模式）', 'success');
 
     // 获取页面
-    const page = await getPageFromContext(context);
+    const page = await getPageFromContdext(context);
 
     // 访问网站
     log('🌐 正在打开 https://www.xiyouzhaoci.com/...', 'info');
