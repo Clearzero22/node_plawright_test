@@ -17,68 +17,7 @@
      POST /api/search/amazon
      POST /api/scrape/amazon-product
      POST /api/keywords/xiyouzhaoci
+     POST /api/gemini/upload
 
-[API] Xiyouzhaoci request for ASIN: B08N5WRWNW
-[Xiyouzhaoci] Starting scrape for ASIN: B08N5WRWNW
-[Xiyouzhaoci] Using shared browser profile: /Users/clearzero22/.node-plawright-test/chrome-profile/automation
-[B08N5WRWNW] Navigating to xiyouzhaoci.com...
-[B08N5WRWNW] Page loaded: 西柚找词-每小时抓取亚马逊搜索排名
-[B08N5WRWNW] Looking for ASIN input field...
-[B08N5WRWNW] ASIN submitted, waiting for results...
-[B08N5WRWNW] Looking for select-all checkbox...
-[B08N5WRWNW] Found checkbox after 0 scrolls
-[B08N5WRWNW] Error during scraping: locator.click: Target page, context or browser has been closed
-Call log:
-[2m  - waiting for locator('.check_block').first()[22m
-[2m    - locator resolved to <div data-v-522a800a="" class="check_block"></div>[22m
-[2m  - attempting click action[22m
-[2m    2 × waiting for element to be visible, enabled and stable[22m
-[2m      - element is visible, enabled and stable[22m
-[2m      - scrolling into view if needed[22m
-[2m      - done scrolling[22m
-[2m      - <div role="dialog" aria-modal="true" class="el-overlay-dialog" aria-labelledby="el-id-7350-28" aria-describedby="el-id-7350-29">…</div> from <div data-v-1dd2dadd="">…</div> subtree intercepts pointer events[22m
-[2m    - retrying click action[22m
-[2m    - waiting 20ms[22m
-[2m    2 × waiting for element to be visible, enabled and stable[22m
-[2m      - element is visible, enabled and stable[22m
-[2m      - scrolling into view if needed[22m
-[2m      - done scrolling[22m
-[2m      - <div role="dialog" aria-modal="true" class="el-overlay-dialog" aria-labelledby="el-id-7350-28" aria-describedby="el-id-7350-29">…</div> from <div data-v-1dd2dadd="">…</div> subtree intercepts pointer events[22m
-[2m    - retrying click action[22m
-[2m      - waiting 100ms[22m
-[2m    3 × waiting for element to be visible, enabled and stable[22m
-[2m      - element is visible, enabled and stable[22m
-[2m      - scrolling into view if needed[22m
-[2m      - done scrolling[22m
-[2m      - <div role="dialog" aria-modal="true" class="el-overlay-dialog" aria-labelledby="el-id-7350-28" aria-describedby="el-id-7350-29">…</div> from <div data-v-1dd2dadd="">…</div> subtree intercepts pointer events[22m
-[2m    - retrying click action[22m
-[2m      - waiting 500ms[22m
-
-    at scrapeAsin (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/src/services/xiyouzhaociService.ts:158:22)
-    at async Object.scrapeXiyouzhaociKeywords (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/src/services/xiyouzhaociService.ts:217:35)
-    at async <anonymous> (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/src/api-server.ts:608:20)
-    at async dispatch (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/node_modules/hono/dist/cjs/compose.js:43:17)
-    at async cors2 (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/node_modules/hono/dist/cjs/middleware/cors/index.js:103:5)
-    at async dispatch (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/node_modules/hono/dist/cjs/compose.js:43:17)
-    at async /Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/node_modules/hono/dist/cjs/hono-base.js:322:25
-    at async responseViaResponseObject (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/node_modules/@hono/node-server/dist/index.cjs:710:13)
-    at async Server.<anonymous> (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/node_modules/@hono/node-server/dist/index.cjs:808:11)
-[Xiyouzhaoci] Scraped 0 keywords
-[API] Xiyouzhaoci request for ASIN: B08F5M1K9M
-[Xiyouzhaoci] Starting scrape for ASIN: B08F5M1K9M
-[Xiyouzhaoci] Using shared browser profile: /Users/clearzero22/.node-plawright-test/chrome-profile/automation
-[B08F5M1K9M] Navigating to xiyouzhaoci.com...
-[B08F5M1K9M] Page loaded: 西柚找词-每小时抓取亚马逊搜索排名
-[B08F5M1K9M] Looking for ASIN input field...
-[B08F5M1K9M] ASIN submitted, waiting for results...
-[B08F5M1K9M] Error during scraping: page.waitForTimeout: Target page, context or browser has been closed
-    at scrapeAsin (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/src/services/xiyouzhaociService.ts:136:16)
-    at async Object.scrapeXiyouzhaociKeywords (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/src/services/xiyouzhaociService.ts:217:35)
-    at async <anonymous> (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/src/api-server.ts:608:20)
-    at async dispatch (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/node_modules/hono/dist/cjs/compose.js:43:17)
-    at async cors2 (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/node_modules/hono/dist/cjs/middleware/cors/index.js:103:5)
-    at async dispatch (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/node_modules/hono/dist/cjs/compose.js:43:17)
-    at async /Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/node_modules/hono/dist/cjs/hono-base.js:322:25
-    at async responseViaResponseObject (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/node_modules/@hono/node-server/dist/index.cjs:710:13)
-    at async Server.<anonymous> (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/node_modules/@hono/node-server/dist/index.cjs:808:11)
-[Xiyouzhaoci] Scraped 0 keywords
+[API] Gemini file upload request: /Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/output/gigab2b-product-page.png
+[API] Gemini file upload request: /Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/output/amazon-product-B0F281R5RC-2026-04-28T14-05-38.png
