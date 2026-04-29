@@ -256,3 +256,32 @@ Call log:
   name: 'TimeoutError'
 }
 [Xiyouzhaoci] Scraped 0 keywords
+[API] Xiyouzhaoci request for ASIN: B0DJ9WYYYQ
+[Xiyouzhaoci] Starting scrape for ASIN: B0DJ9WYYYQ
+[Xiyouzhaoci] Using shared browser profile: /Users/clearzero22/.node-plawright-test/chrome-profile/automation
+[B0DJ9WYYYQ] Navigating to xiyouzhaoci.com...
+[B0DJ9WYYYQ] Page loaded: 西柚找词-每小时抓取亚马逊搜索排名
+[B0DJ9WYYYQ] Looking for ASIN input field...
+[B0DJ9WYYYQ] ASIN submitted, waiting for results...
+[B0DJ9WYYYQ] Looking for select-all checkbox...
+[B0DJ9WYYYQ] Found checkbox after 0 scrolls
+[B0DJ9WYYYQ] Selected all rows
+[B0DJ9WYYYQ] Extracting table data...
+[B0DJ9WYYYQ] Extracted 19 lines from table
+[B0DJ9WYYYQ] Parsed 0 valid keywords
+[API] Xiyouzhaoci error: Error: ENOENT: no such file or directory, open 'output/keywords/keywords-B0DJ9WYYYQ-1777490742061.csv'
+    at writeFileSync (node:fs:2344:20)
+    at Object.scrapeXiyouzhaociKeywords (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/src/services/xiyouzhaociService.ts:228:7)
+    at async <anonymous> (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/src/api-server.ts:609:20)
+    at async dispatch (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/node_modules/hono/dist/cjs/compose.js:43:17)
+    at async cors2 (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/node_modules/hono/dist/cjs/middleware/cors/index.js:103:5)
+    at async dispatch (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/node_modules/hono/dist/cjs/compose.js:43:17)
+    at async /Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/node_modules/hono/dist/cjs/hono-base.js:322:25
+    at async responseViaResponseObject (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/node_modules/@hono/node-server/dist/index.cjs:710:13)
+    at async Server.<anonymous> (/Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/node_modules/@hono/node-server/dist/index.cjs:808:11) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'output/keywords/keywords-B0DJ9WYYYQ-1777490742061.csv'
+}
+[API] Gemini file upload request: /Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test/output/gigab2b-product-page.png
