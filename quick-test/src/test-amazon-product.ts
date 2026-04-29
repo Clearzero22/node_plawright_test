@@ -11,7 +11,7 @@ import * as path from 'path';
  * 3. 抓取五点描述（Bullet Points）
  * 4. 抓取长描述（Product Description）
  * 5. 保存为 JSON 和 TXT 格式
- */
+ */··
 
 interface ProductDetails {
   url: string;

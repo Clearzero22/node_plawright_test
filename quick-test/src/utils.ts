@@ -5,8 +5,9 @@ import os from 'os';
 // 获取用户数据目录
 export function getUserDataDir(profileName?: string): string {
   if (process.platform === 'darwin') {
-    // macOS: 直接使用本机 Chrome 的 Default profile
-    return path.join(os.homedir(), 'Library', 'Application Support', 'Google', 'Chrome', profileName || 'Default');
+    // macOS: 使用项目本地持久化目录，避免与正在使用的Chrome冲突
+    const projectDataDir = path.join(os.homedir(), '.node-plawright-test', 'chrome-profile', profileName || 'automation');
+    return projectDataDir;
   }
   // Windows: 使用项目本地持久化目录
   const userDataDir = path.join(os.homedir(), 'AppData', 'Roaming', 'node_plawright_test', profileName || 'chromium-profile');
@@ -51,6 +52,103 @@ export async function launchPersistent(userDataDir?: string): Promise<BrowserCon
 // CDP模式连接（可选）
 export async function connectCDP(): Promise<Browser> {
   return await chromium.connectOverCDP('http://localhost:9222');
+}
+
+/**
+ * 启动隐身模式浏览器（完整反检测配置）
+ * 用于绕过 Google 等网站的自动化检测
+ */
+export async function launchStealth(userDataDir?: string): Promise<BrowserContext> {
+  const dataDir = userDataDir || path.join(os.homedir(), '.node-plawright-test', 'chrome-profile', 'stealth');
+
+  log('🚀 启动隐身模式浏览器', 'info');
+
+  const launchOptions: any = {
+    headless: false,
+    channel: 'chrome',
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-blink-features=AutomationControlled',
+      '--disable-infobars',
+      '--disable-features=IsolateOrigins,site-per-process',
+      '--disable-web-security',
+      '--disable-features=VizDisplayCompositor',
+      '--start-maximized',
+      '--disable-save-password-bubble',
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--disable-translate',
+    ],
+    viewport: null,
+    ignoreDefaultArgs: [
+      '--enable-automation',
+      '--enable-blink-features=IdleDetection',
+    ],
+    actionTimeout: 0,
+  };
+
+  const context = await chromium.launchPersistentContext(dataDir, launchOptions);
+
+  // 注入完整的反检测脚本
+  await context.addInitScript(`
+    Object.defineProperty(navigator, 'webdriver', {
+      get: () => undefined,
+    });
+    window.chrome = {
+      runtime: {},
+      loadTimes: function() {},
+      csi: function() {},
+      app: {},
+    };
+    Object.defineProperty(navigator, 'plugins', {
+      get: () => [
+        {
+          0: { type: "application/x-google-chrome-pdf", suffixes: "pdf", description: "Portable Document Format" },
+          description: "Portable Document Format",
+          filename: "internal-pdf-viewer",
+          length: 1,
+          name: "Chrome PDF Plugin"
+        },
+        {
+          0: { type: "application/pdf", suffixes: "pdf", description: "" },
+          description: "",
+          filename: "mhjfbmdgcfjbbpaeojofohoefgiehjai",
+          length: 1,
+          name: "Chrome PDF Viewer"
+        },
+        {
+          0: { type: "application/x-nacl", suffixes: "", description: "Native Client Executable" },
+          1: { type: "application/x-pnacl", suffixes: "", description: "Portable Native Client Executable" },
+          description: "",
+          filename: "internal-nacl-plugin",
+          length: 2,
+          name: "Native Client"
+        }
+      ],
+    });
+    Object.defineProperty(navigator, 'languages', {
+      get: () => ['en-US', 'en', 'zh-CN', 'zh'],
+    });
+    const originalQuery = window.navigator.permissions.query;
+    window.navigator.permissions.query = (parameters) => (
+      parameters.name === 'notifications'
+        ? Promise.resolve({ state: Notification.permission })
+        : originalQuery(parameters)
+    );
+    delete window.__playwright;
+    delete window.__pw_manual;
+    delete window.__pw_inspect;
+    Object.defineProperty(screen, 'availHeight', { get: () => screen.height - 40 });
+    Object.defineProperty(screen, 'availWidth', { get: () => screen.width });
+    Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
+    Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 4 });
+  `);
+
+  log(`📁 使用数据目录: ${dataDir}`, 'info');
+
+  return context;
 }
 
 // 获取页面（从context）

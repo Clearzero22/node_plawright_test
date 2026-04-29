@@ -1,25 +1,33 @@
-import { launchPersistent, getPageFromContext, log, sleep } from './utils';
+import { launchStealth, getPageFromContext, log, sleep } from './utils';
 import * as fs from 'fs';
 import * as path from 'path';
+import os from 'os';
 
 /**
- * Gemini 文件上传测试
+ * Gemini 文件上传测试（使用隐身模式支持 Google 登录）
  *
  * 功能：
- * 1. 访问 Gemini
- * 2. 上传文件
- * 3. 输入提示词
- * 4. 发送消息
- * 5. 保存回复
+ * 1. 使用隐身模式启动浏览器（绕过 Google 自动化检测）
+ * 2. 访问 Gemini
+ * 3. 支持手动登录（首次运行需要）
+ * 4. 上传文件
+ * 5. 输入提示词
+ * 6. 发送消息
+ * 7. 保存回复
  */
 
 async function testGeminiFileUpload() {
   log('='.repeat(60), 'info');
-  log('🚀 Gemini 文件上传测试', 'info');
+  log('🚀 Gemini 文件上传测试（隐身模式）', 'info');
+  log('='.repeat(60), 'info');
+  log('📌 使用隐身模式配置，支持 Google 自动登录', 'info');
   log('='.repeat(60), 'info');
 
   try {
-    const context = await launchPersistent();
+    // 使用隐身模式启动，指定独立的配置文件（避免冲突）
+    const context = await launchStealth(
+      path.join(os.homedir(), '.node-plawright-test', 'chrome-profile', 'file-upload')
+    );
     const page = await getPageFromContext(context);
 
     // 访问 Gemini
@@ -28,6 +36,40 @@ async function testGeminiFileUpload() {
       timeout: 30000,
       waitUntil: 'domcontentloaded'
     });
+
+    // 等待页面稳定并检查是否需要登录
+    await sleep(3000);
+
+    let checkCount = 0;
+    while (checkCount < 3) {
+      const currentUrl = page.url();
+      log(`🔍 检查 URL: ${currentUrl.substring(0, 50)}...`, 'info');
+
+      if (currentUrl.includes('accounts.google.com') || currentUrl.includes('signin')) {
+        log('\n⚠️  检测到未登录状态', 'warning');
+        log('📌 请在浏览器中完成 Google 登录', 'info');
+        log('💡 登录成功后，配置文件会保存 cookies，下次自动登录', 'info');
+        log('⏳ 等待登录完成（最多 120 秒）...', 'info');
+
+        try {
+          await page.waitForURL('https://gemini.google.com/**', { timeout: 120000 });
+          log('✅ 登录成功！', 'success');
+          await sleep(3000);
+          break;
+        } catch {
+          log('\n❌ 登录超时或失败', 'error');
+          log('💡 提示：如果看到 "browser not secure" 错误，请尝试使用真实 Chrome 配置文件', 'warning');
+          log('   运行: npx tsx src/test-gemini-real-profile.ts', 'warning');
+          return;
+        }
+      } else if (currentUrl.includes('gemini.google.com')) {
+        log('✅ 已登录或无需登录', 'success');
+        break;
+      }
+
+      checkCount++;
+      await sleep(2000);
+    }
 
     log('✅ 页面加载完成', 'success');
     await sleep(5000); // 增加等待时间，确保页面完全加载
