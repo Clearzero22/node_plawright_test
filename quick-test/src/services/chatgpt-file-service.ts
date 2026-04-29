@@ -32,6 +32,7 @@ export interface ChatGPTFileResult {
   response: string;
   fileUploaded: boolean;
   filePath: string | null;
+  savedPath: string | null;
   timestamp: string;
   error?: string;
 }
@@ -207,23 +208,32 @@ export class ChatGPTFileService {
       await this.sleep(500);
       await textbox.fill(prompt);
       await this.sleep(1000);
+
+      // 记录发送前的 assistant 消息数量
+      const msgCountBefore = await page.evaluate(() =>
+        document.querySelectorAll('[data-message-author-role="assistant"]').length
+      );
+
       await textbox.press('Enter');
+      console.log(`[ChatGPT] 消息已发送，当前 assistant 消息数: ${msgCountBefore}`);
 
-      // 等待回复出现
+      // 等待新的 assistant 消息出现
       try {
-        await page.waitForSelector('[data-message-author-role="assistant"]', {
-          timeout: responseTimeout,
-        });
+        await page.waitForFunction(
+          (before) => document.querySelectorAll('[data-message-author-role="assistant"]').length > before,
+          msgCountBefore,
+          { timeout: responseTimeout },
+        );
+        console.log('[ChatGPT] 新的 assistant 消息已出现');
 
-        // 等待回复完全生成：stop button 出现后消失说明生成完毕
+        // 等待回复完全生成：stop button 出现后消失
         try {
           await page.waitForSelector('[data-testid="stop-button"]', { timeout: 5000 });
           await page.waitForSelector('[data-testid="stop-button"]', { state: 'hidden', timeout: responseTimeout });
         } catch {
-          // 没有停止按钮或已消失，说明回复已完整
+          // 没有停止按钮或已消失
         }
 
-        // 额外等待确保内容完全渲染
         await this.sleep(2000);
       } catch (error) {
         return {
@@ -234,58 +244,54 @@ export class ChatGPTFileService {
         };
       }
 
-      // 获取回复（优先用复制按钮获取完整 Markdown 内容）
+      // 获取最新一条 assistant 回复
       let responseText = '';
       try {
-        // 方法1：点击复制按钮，从剪贴板获取完整内容
-        const copyBtn = page.locator('[data-testid="copy-turn-action-button"]').last();
-        if (await copyBtn.isVisible({ timeout: 3000 })) {
-          await copyBtn.click();
-          await this.sleep(500);
-
-          responseText = await page.evaluate(async () => {
-            try {
-              return await navigator.clipboard.readText();
-            } catch {
-              return '';
-            }
-          });
-
-          if (responseText) {
-            console.log(`[ChatGPT] 通过复制按钮获取回复，长度: ${responseText.length}`);
+        // 方法1：通过 page.evaluate 触发复制按钮，读取剪贴板获取完整 Markdown
+        responseText = await page.evaluate(async () => {
+          const copyBtns = document.querySelectorAll('[data-testid="copy-turn-action-button"]');
+          if (copyBtns.length === 0) return '';
+          const lastBtn = copyBtns[copyBtns.length - 1] as HTMLElement;
+          lastBtn.click();
+          await new Promise(r => setTimeout(r, 500));
+          try {
+            return await navigator.clipboard.readText();
+          } catch {
+            return '';
           }
+        });
+
+        if (responseText) {
+          console.log(`[ChatGPT] 通过复制按钮获取 Markdown，长度: ${responseText.length}`);
         }
 
-        // 方法2：直接读取 DOM innerText
-        if (!responseText) {
-          const lastResponse = page.locator('[data-message-author-role="assistant"]').last();
-          if (await lastResponse.isVisible({ timeout: 3000 })) {
-            responseText = await lastResponse.innerText();
-            console.log(`[ChatGPT] 通过 innerText 获取回复，长度: ${responseText.length}`);
-          }
-        }
-
-        // 方法3：备用选择器
+        // 方法2：fallback 用 textContent
         if (!responseText) {
           responseText = await page.evaluate(() => {
-            const selectors = ['[data-message-author-role="assistant"]', '.agent-turn', '.markdown'];
-            for (const sel of selectors) {
-              const els = document.querySelectorAll(sel);
-              if (els.length > 0) {
-                const text = els[els.length - 1].textContent?.trim();
-                if (text && text.length > 10) return text;
-              }
-            }
-            return '';
+            const msgs = document.querySelectorAll('[data-message-author-role="assistant"]');
+            if (msgs.length === 0) return '';
+            return msgs[msgs.length - 1].textContent?.trim() || '';
           });
+          console.log(`[ChatGPT] 通过 textContent 获取回复，长度: ${responseText.length}`);
         }
       } catch (error) {
         console.error('[ChatGPT] 获取回复失败:', error);
       }
 
+      // 保存回复到文件
+      if (responseText) {
+        const saveDir = path.join(process.cwd(), 'output');
+        if (!fs.existsSync(saveDir)) fs.mkdirSync(saveDir, { recursive: true });
+        const savePath = path.join(saveDir, `chatgpt-response-${Date.now()}.md`);
+        fs.writeFileSync(savePath, responseText, 'utf-8');
+        console.log(`[ChatGPT] 回复已保存: ${savePath}`);
+      }
+
       return {
         success: true, prompt, response: responseText, fileUploaded,
-        filePath: fileUploaded ? filePath : null, timestamp: new Date().toISOString(),
+        filePath: fileUploaded ? filePath : null,
+        savedPath: responseText ? `output/chatgpt-response-${Date.now()}.md` : null,
+        timestamp: new Date().toISOString(),
       };
     } finally {
       // CDP 连接的是真实 Chrome，只断开连接，不关闭浏览器
