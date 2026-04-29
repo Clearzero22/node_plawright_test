@@ -1,0 +1,47 @@
+{
+  "name": "quick-test",
+  "version": "1.0.0",
+  "description": "Quick testing scripts for browser automation",
+  "scripts": {
+    "build": "tsc",
+    "test:chatgpt": "tsx src/test-chatgpt.ts",
+    "test:chatgpt:upload": "tsx src/test-chatgpt-upload.ts",
+    "run:chatgpt": "tsx src/run-chatgpt.ts",
+    "test:gemini": "tsx src/test-gemini-upload.ts",
+    "test:gemini:simple": "tsx src/test-gemini-simple.ts",
+    "test:gemini:upload": "tsx src/test-gemini-file-upload.ts",
+    "test:gemini:listing": "tsx src/test-gemini-listing-generator.ts",
+    "test:gemini:listing:multi": "tsx src/test-gemini-listing-multi-images.ts",
+    "test:doubao:listing": "tsx src/test-doubao-listing-generator.ts",
+    "test:amazon:search": "tsx src/test-amazon-search.ts",
+    "test:amazon:product": "tsx src/test-amazon-product.ts",
+    "test:amazon:complete": "tsx src/test-amazon-product-complete.ts",
+    "test:amazon:multiple": "tsx src/test-amazon-multiple-products.ts",
+    "test:seller-cn": "tsx src/test-seller-sprite-cn.ts",
+    "test:seller-int": "tsx src/test-seller-sprite-int.ts",
+    "test:xiyouzhaoci": "tsx src/test-xiyouzhaoci.ts",
+    "test:bilibili": "tsx src/test-bilibili.ts",
+    "test:taobao": "tsx src/test-taobao.ts",
+    "test:all": "tsx src/test-all-sequential.ts",
+    "test:multi-pages": "tsx src/test-multi-pages.ts",
+    "test:parallel-ops": "tsx src/test-parallel-operations.ts",
+    "test:gigab2b": "tsx src/test-gigab2b.ts",
+    "test:gigab2b:clean": "tsx src/test-gigab2b-clean.ts",
+    "test:parallel": "tsx src/test-all-parallel.ts",
+    "generate": "tsx src/generate.ts",
+    "api": "tsx src/api-server.ts",
+    "api:dev": "tsx watch src/api-server.ts",
+    "dev": "tsx"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.0",
+    "tsx": "^4.21.0"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.0.0",
+    "dotenv": "^17.4.2",
+    "hono": "^4.12.15",
+    "openai": "^6.34.0",
+    "pg": "^8.20.0"
+  }
+}
