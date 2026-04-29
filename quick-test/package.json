@@ -6,6 +6,7 @@
     "build": "tsc",
     "test:chatgpt": "tsx src/test-chatgpt.ts",
     "test:chatgpt:upload": "tsx src/test-chatgpt-upload.ts",
+    "run:chatgpt": "tsx src/run-chatgpt.ts",
     "test:gemini": "tsx src/test-gemini-upload.ts",
     "test:gemini:simple": "tsx src/test-gemini-simple.ts",
     "test:gemini:upload": "tsx src/test-gemini-file-upload.ts",

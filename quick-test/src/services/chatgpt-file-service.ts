@@ -14,6 +14,7 @@ import { chromium, type Browser, type BrowserContext } from 'playwright';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import * as http from 'http';
 import { spawn } from 'child_process';
 
 // ─── Types ────────────────────────────────────────────────────
@@ -40,6 +41,20 @@ export interface ChatGPTFileResult {
 const CDP_PORT = 9222;
 const CDP_URL = `http://localhost:${CDP_PORT}`;
 
+// 绕过系统代理，直接请求 localhost CDP 端口
+function fetchCDP(path: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    http.get(`http://127.0.0.1:${CDP_PORT}${path}`, (res) => {
+      let data = '';
+      res.on('data', (chunk) => (data += chunk));
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); }
+        catch { reject(new Error('Invalid JSON from CDP')); }
+      });
+    }).on('error', reject);
+  });
+}
+
 // ─── Service ──────────────────────────────────────────────────
 
 export class ChatGPTFileService {
@@ -51,19 +66,13 @@ export class ChatGPTFileService {
    * 如果未启动则自动启动
    */
   private async ensureChromeCDP(): Promise<Browser> {
-    // 尝试连接已有 Chrome 实例（先试 HTTP，再试 WebSocket）
     try {
-      // 获取 WebSocket URL
-      const resp = await fetch(`${CDP_URL}/json/version`);
-      if (resp.ok) {
-        const data: any = await resp.json();
-        if (data.webSocketDebuggerUrl) {
-          const browser = await chromium.connectOverCDP(data.webSocketDebuggerUrl, { timeout: 5000 });
-          console.log('[ChatGPT] 已通过 WebSocket 连接到现有 Chrome 实例');
-          return browser;
-        }
+      const data = await fetchCDP('/json/version');
+      if (data.webSocketDebuggerUrl) {
+        const browser = await chromium.connectOverCDP(data.webSocketDebuggerUrl, { timeout: 5000 });
+        console.log('[ChatGPT] 已通过 WebSocket 连接到现有 Chrome 实例');
+        return browser;
       }
-      // fallback: 直接用 HTTP URL
       const browser = await chromium.connectOverCDP(CDP_URL, { timeout: 5000 });
       console.log('[ChatGPT] 已连接到现有 Chrome 实例');
       return browser;
@@ -92,7 +101,9 @@ export class ChatGPTFileService {
       for (let i = 0; i < 15; i++) {
         await this.sleep(1000);
         try {
-          const browser = await chromium.connectOverCDP(CDP_URL, { timeout: 3000 });
+          const d = await fetchCDP('/json/version');
+          const wsUrl = d.webSocketDebuggerUrl || CDP_URL;
+          const browser = await chromium.connectOverCDP(wsUrl, { timeout: 3000 });
           console.log('[ChatGPT] Chrome 已启动并连接');
           return browser;
         } catch {
@@ -198,12 +209,22 @@ export class ChatGPTFileService {
       await this.sleep(1000);
       await textbox.press('Enter');
 
-      // 等待回复
+      // 等待回复出现
       try {
         await page.waitForSelector('[data-message-author-role="assistant"]', {
           timeout: responseTimeout,
         });
-        await this.sleep(3000);
+
+        // 等待回复完全生成：stop button 出现后消失说明生成完毕
+        try {
+          await page.waitForSelector('[data-testid="stop-button"]', { timeout: 5000 });
+          await page.waitForSelector('[data-testid="stop-button"]', { state: 'hidden', timeout: responseTimeout });
+        } catch {
+          // 没有停止按钮或已消失，说明回复已完整
+        }
+
+        // 额外等待确保内容完全渲染
+        await this.sleep(2000);
       } catch (error) {
         return {
           success: false, prompt, response: '', fileUploaded,
@@ -213,25 +234,53 @@ export class ChatGPTFileService {
         };
       }
 
-      // 获取回复
+      // 获取回复（优先用复制按钮获取完整 Markdown 内容）
       let responseText = '';
       try {
-        const lastResponse = page.locator('[data-message-author-role="assistant"]').last();
-        if (await lastResponse.isVisible({ timeout: 5000 })) {
-          responseText = await lastResponse.innerText();
-        }
-      } catch {
-        responseText = await page.evaluate(() => {
-          const selectors = ['[data-message-author-role="assistant"]', '.agent-turn', '.markdown'];
-          for (const sel of selectors) {
-            const els = document.querySelectorAll(sel);
-            if (els.length > 0) {
-              const text = els[els.length - 1].textContent?.trim();
-              if (text && text.length > 10) return text;
+        // 方法1：点击复制按钮，从剪贴板获取完整内容
+        const copyBtn = page.locator('[data-testid="copy-turn-action-button"]').last();
+        if (await copyBtn.isVisible({ timeout: 3000 })) {
+          await copyBtn.click();
+          await this.sleep(500);
+
+          responseText = await page.evaluate(async () => {
+            try {
+              return await navigator.clipboard.readText();
+            } catch {
+              return '';
             }
+          });
+
+          if (responseText) {
+            console.log(`[ChatGPT] 通过复制按钮获取回复，长度: ${responseText.length}`);
           }
-          return '';
-        });
+        }
+
+        // 方法2：直接读取 DOM innerText
+        if (!responseText) {
+          const lastResponse = page.locator('[data-message-author-role="assistant"]').last();
+          if (await lastResponse.isVisible({ timeout: 3000 })) {
+            responseText = await lastResponse.innerText();
+            console.log(`[ChatGPT] 通过 innerText 获取回复，长度: ${responseText.length}`);
+          }
+        }
+
+        // 方法3：备用选择器
+        if (!responseText) {
+          responseText = await page.evaluate(() => {
+            const selectors = ['[data-message-author-role="assistant"]', '.agent-turn', '.markdown'];
+            for (const sel of selectors) {
+              const els = document.querySelectorAll(sel);
+              if (els.length > 0) {
+                const text = els[els.length - 1].textContent?.trim();
+                if (text && text.length > 10) return text;
+              }
+            }
+            return '';
+          });
+        }
+      } catch (error) {
+        console.error('[ChatGPT] 获取回复失败:', error);
       }
 
       return {
@@ -239,10 +288,9 @@ export class ChatGPTFileService {
         filePath: fileUploaded ? filePath : null, timestamp: new Date().toISOString(),
       };
     } finally {
-      // 不关闭浏览器 — CDP 连接的是真实 Chrome，关闭会影响用户
-      // 只断开连接
+      // CDP 连接的是真实 Chrome，只断开连接，不关闭浏览器
       if (this.browser) {
-        try { await this.browser.close(); } catch { /* ignore */ }
+        try { await (this.browser as any).disconnect?.(); } catch { /* ignore */ }
         this.browser = null;
       }
     }
