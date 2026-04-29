@@ -74,11 +74,12 @@ export class CrawlerService {
     }
 
     try {
-      // 2. 执行爬虫（临时 Chrome profile，不混入 run 目录）
+      // 2. 执行爬虫（使用统一的 Chrome profile，确保登录状态共享）
       const { chromium } = await import('playwright');
-      const profileDir = userDataDir || path.join(os.tmpdir(), 'crawler-chrome-profile');
+      // ⚠️ 重要：统一使用共享的浏览器数据目录
+      const sharedProfileDir = path.join(os.homedir(), '.node-plawright-test', 'chrome-profile', 'automation');
       const context = await chromium.launchPersistentContext(
-        profileDir,
+        sharedProfileDir,
         { headless, args: ['--no-sandbox'] }
       );
       const page = await context.newPage();

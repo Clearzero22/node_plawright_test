@@ -20,7 +20,8 @@ export class AmazonSearchService {
   private context: BrowserContext | null = null;
 
   async search(keyword: string, maxResults = 20): Promise<SearchResult> {
-    const userDataDir = path.join(os.tmpdir(), 'amazon-search-profile');
+    // ⚠️ 重要：统一使用共享的浏览器数据目录
+    const userDataDir = path.join(os.homedir(), '.node-plawright-test', 'chrome-profile', 'automation');
 
     this.browser = await chromium.launchPersistentContext(userDataDir, {
       headless: true,

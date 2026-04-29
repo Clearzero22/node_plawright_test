@@ -29,6 +29,7 @@ import { AiVisionService, PROMPT_TEMPLATES } from './services/ai-vision-service'
 import { AmazonSearchService } from './services/amazon-search-service';
 import { AmazonProductService } from './services/amazon-product-service';
 import { DatabaseService } from './core/database-service';
+import * as xiyouzhaociService from './services/xiyouzhaociService';
 
 // ─── 配置 ────────────────────────────────────────────────────
 
@@ -578,6 +579,58 @@ app.get('/api/db/runs/:runId/staging', async (c) => {
   }
 });
 
+// ─── POST /api/keywords/xiyouzhaoci ────────────────────────────────
+
+app.post('/api/keywords/xiyouzhaoci', async (c) => {
+  try {
+    const { asin, headless = true, maxKeywords = 50 } = await c.req.json();
+
+    if (!asin || typeof asin !== 'string') {
+      return c.json(
+        { success: false, error: 'ASIN is required and must be a string' },
+        400,
+      );
+    }
+
+    // Validate ASIN format (basic check)
+    if (!/^[A-Z0-9]{10}$/.test(asin)) {
+      return c.json(
+        {
+          success: false,
+          error: 'Invalid ASIN format. ASIN must be 10 alphanumeric characters.',
+        },
+        400,
+      );
+    }
+
+    console.log(`[API] Xiyouzhaoci request for ASIN: ${asin}`);
+
+    const result = await xiyouzhaociService.scrapeXiyouzhaociKeywords(asin, {
+      headless,
+      maxKeywords,
+      saveCsv: true,
+    });
+
+    return c.json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    console.error('[API] Xiyouzhaoci error:', error);
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    return c.json(
+      {
+        success: false,
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? String(error) : undefined,
+      },
+      500,
+    );
+  }
+});
+
 // ─── 全局错误处理 ────────────────────────────────────────────
 
 app.onError((err, c) => {
@@ -602,6 +655,7 @@ serve(
     console.log(`     GET  /api/ai/templates`);
     console.log(`     GET  /api/ai/results`);
     console.log(`     POST /api/search/amazon`);
-    console.log(`     POST /api/scrape/amazon-product\n`);
+    console.log(`     POST /api/scrape/amazon-product`);
+    console.log(`     POST /api/keywords/xiyouzhaoci\n`);
   }
 );

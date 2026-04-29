@@ -24,6 +24,7 @@ npm run api
 - 爬虫服务 (GigaB2B)
 - AI图片识别服务
 - Amazon搜索和产品抓取
+- 西柚找词关键词挖掘
 - 数据库管理API
 
 **验证API运行：**
@@ -63,6 +64,56 @@ http://localhost:5173
 
 ---
 
+## 📁 统一浏览器数据目录配置
+
+### ⚠️ 重要原则
+
+**所有服务必须使用统一的浏览器数据目录：**
+```
+~/.node-plawright-test/chrome-profile/automation
+```
+
+### 为什么需要统一目录？
+
+1. **共享登录状态** - 所有服务共享相同的cookies和会话
+2. **避免重复登录** - 登录一次，所有服务都能使用
+3. **数据持久化** - 登录状态不会因为系统重启而丢失
+4. **统一管理** - 集中管理所有浏览器配置和扩展
+
+### 各服务的浏览器目录配置
+
+| 服务 | 配置文件 | 目录路径 |
+|------|----------|----------|
+| 西柚找词 | `xiyouzhaociService.ts` | `~/.node-plawright-test/chrome-profile/automation` |
+| Amazon搜索 | `amazon-search-service.ts` | `~/.node-plawright-test/chrome-profile/automation` |
+| Amazon产品 | `amazon-product-service.ts` | `~/.node-plawright-test/chrome-profile/automation` |
+| 爬虫服务 | `crawler-service.ts` | `~/.node-plawright-test/chrome-profile/automation` |
+| Gemini脚本 | 所有test-gemini*.ts | `~/.node-plawright-test/chrome-profile/automation` |
+| ChatGPT脚本 | 所有test-chatgpt*.ts | `~/.node-plawright-test/chrome-profile/automation` |
+
+### 首次使用指南
+
+**首次运行时需要手动登录一次：**
+
+1. 运行任意一个服务或脚本
+2. 在打开的浏览器中完成登录（如Google、Amazon等）
+3. 登录状态会自动保存到 `automation` 目录
+4. 之后所有服务都能使用这个登录状态
+
+### 验证配置
+
+检查服务是否使用了正确的目录：
+
+```bash
+# 检查统一目录是否存在
+ls -la ~/.node-plawright-test/chrome-profile/automation
+
+# 检查目录内容（应该包含浏览器配置文件）
+ls -la ~/.node-plawright-test/chrome-profile/automation/Default/
+```
+
+---
+
 ## 📋 项目结构
 
 ### 后端服务结构
@@ -71,9 +122,11 @@ quick-test/
 ├── src/
 │   ├── api-server.ts              # API服务器主入口
 │   ├── services/                  # 业务服务
-│   │   ├── crawler-service.ts
-│   │   ├── ai-vision-service.ts
-│   │   └── amazon-search-service.ts
+│   │   ├── crawler-service.ts     # 爬虫服务
+│   │   ├── ai-vision-service.ts   # AI识别服务
+│   │   ├── amazon-search-service.ts    # Amazon搜索
+│   │   ├── amazon-product-service.ts  # Amazon产品
+│   │   └── xiyouzhaociService.ts  # 西柚找词
 │   └── core/
 │       └── database-service.ts    # 数据库服务
 ├── docker-compose.yml             # PostgreSQL配置
@@ -120,6 +173,9 @@ workflow-editor/
 - `POST /api/search/amazon` - Amazon 竞品搜索
 - `POST /api/scrape/amazon-product` - Amazon 产品详情抓取
 
+### 西柚找词服务
+- `POST /api/keywords/xiyouzhaoci` - 西柚找词关键词挖掘
+
 ### 数据库服务
 - `GET /api/db/stats` - 数据库统计
 - `GET /api/db/runs` - 运行记录
@@ -140,6 +196,16 @@ lsof -ti:5173 | xargs kill -9
 
 # 查找占用5432端口的进程
 docker-compose down
+```
+
+### 登录状态丢失
+```bash
+# 检查统一目录是否存在
+ls -la ~/.node-plawright-test/chrome-profile/automation
+
+# 如果不存在，重新运行任意服务并登录
+cd /Users/clearzero22/development/ai/01_amazon_projects/node_plawright_test/quick-test
+npm run test:gemini:simple
 ```
 
 ### 数据库连接问题
@@ -213,8 +279,41 @@ curl http://localhost:5173
 2. **端口默认值：** 数据库(5432)、后端(3456)、前端(5173)
 3. **日志查看：** 各服务的日志会显示在对应的终端窗口
 4. **开发模式：** 前端支持热重载，修改代码后自动刷新
+5. **统一目录：** 所有服务必须使用 `~/.node-plawright-test/chrome-profile/automation`
+
+---
+
+## 🚨 重要注意事项
+
+### 浏览器数据目录管理
+
+**❌ 错误做法：**
+```typescript
+// 不要使用临时目录
+const userDataDir = '/tmp/some-profile';
+const userDataDir = './.chrome-data';
+```
+
+**✅ 正确做法：**
+```typescript
+// 必须使用统一的共享目录
+import { homedir } from 'os';
+import { join } from 'path';
+
+const userDataDir = join(homedir(), '.node-plawright-test', 'chrome-profile', 'automation');
+```
+
+### 新服务配置检查清单
+
+添加新的浏览器服务时，必须确保：
+
+1. ✅ 使用 `~/.node-plawright-test/chrome-profile/automation` 目录
+2. ✅ 在CLAUDE.md中记录服务配置
+3. ✅ 测试登录状态共享功能
+4. ✅ 验证与其他服务的兼容性
 
 ---
 
 **最后更新：** 2026-04-30
 **维护者：** Claude Code Assistant
+**重要原则：** 所有浏览器服务必须统一使用 `~/.node-plawright-test/chrome-profile/automation` 目录
