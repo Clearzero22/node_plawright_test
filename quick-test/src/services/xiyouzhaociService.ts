@@ -5,7 +5,7 @@
  */
 
 import { chromium, type Page } from 'playwright';
-import { writeFileSync } from 'fs';
+import { writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 
@@ -223,6 +223,7 @@ export async function scrapeXiyouzhaociKeywords(
     // Save CSV if requested
     let csvPath = '';
     if (saveCsv && csvData) {
+      mkdirSync(CSV_OUTPUT_DIR, { recursive: true });
       const filename = `keywords-${asin}-${Date.now()}.csv`;
       csvPath = join(CSV_OUTPUT_DIR, filename);
       writeFileSync(csvPath, csvData, 'utf-8');
