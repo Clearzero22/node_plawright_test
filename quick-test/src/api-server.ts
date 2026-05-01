@@ -731,7 +731,12 @@ app.post('/api/chatgpt/upload', async (c) => {
 
 app.post('/api/ai/optimize', async (c) => {
   try {
-    const { title, description, tone = 'professional', language = 'zh-CN', headless = false } = await c.req.json();
+    const body = await c.req.json();
+    const {
+      title, description, bulletPoints, longDescription,
+      competitors, keywords,
+      tone = 'professional', language = 'zh-CN', headless = false,
+    } = body;
 
     if (!title || typeof title !== 'string') {
       return c.json({ success: false, error: 'title is required' }, 400);
@@ -743,38 +748,67 @@ app.post('/api/ai/optimize', async (c) => {
       concise: '简洁明了、突出核心卖点',
     };
 
-    const langLabel: Record<string, string> = {
-      'zh-CN': '中文',
-      'en-US': 'English',
-      'ja-JP': '日本語',
-    };
+    // Build competitor block
+    let competitorSection = '';
+    if (Array.isArray(competitors) && competitors.length > 0) {
+      const topComps = competitors.slice(0, 3);
+      const sections = topComps.map((comp: Record<string, unknown>, i: number) => {
+        const cTitle = String(comp.title || '未知');
+        const cBrand = comp.brand ? String(comp.brand) : '';
+        const cPrice = comp.price ? `$${comp.price}` : '';
+        const cRating = comp.rating ? `${comp.rating}星` : '';
+        const cBullets = (Array.isArray(comp.bulletPoints) ? comp.bulletPoints as string[] : []).slice(0, 3);
+        const bulletText = cBullets.length > 0
+          ? cBullets.map((b, j) => `  ${j + 1}. ${String(b).slice(0, 150)}`).join('\n')
+          : '  (无)';
+        const cDesc = comp.longDescription ? String(comp.longDescription).slice(0, 200) : '';
+        return `### 竞品 ${i + 1}: ${cBrand ? cBrand + ' — ' : ''}${cTitle}\n- 价格: ${cPrice || '未知'} | 评分: ${cRating || '未知'}\n- 五点描述:\n${bulletText}${cDesc ? `\n- 长描述摘要: ${cDesc}` : ''}`;
+      }).join('\n\n');
+      competitorSection = `\n## 竞品 Listing 分析（Top ${topComps.length}）\n\n${sections}\n\n分析要点: 提取竞品共性卖点、差异化方向、关键词覆盖策略\n`;
+    }
 
-    const prompt = `你是一个电商文案优化专家。请优化以下商品信息。
+    // Build keyword block
+    let keywordSection = '';
+    if (Array.isArray(keywords) && keywords.length > 0) {
+      const topKw = keywords.slice(0, 15);
+      keywordSection = `\n## 关键词数据\n${topKw.map((k: Record<string, unknown>, i: number) => `${i + 1}. ${k.keyword || k} (搜索量: ${k.searchVolume || '-'}, 难度: ${k.difficulty || '-'})`).join('\n')}`;
+    }
 
-原标题: ${title}
-原描述: ${description || '(无)'}
+    const prompt = `你是一位资深的 Amazon 跨境电商 Listing 优化专家。请根据以下商品信息和竞品数据，优化文案。
 
-要求:
-- 语言: ${langLabel[language] || '中文'}
-- 语气: ${toneGuide[tone] || toneGuide.professional}
-- 输出 JSON 格式: { "optimizedTitle": "...", "optimizedDescription": "...", "seoKeywords": ["..."] }
-- 只输出 JSON，不要其他文字`;
+## 我的商品信息
+- 标题: ${title}
+${description ? `- 描述: ${description}` : ''}
+${Array.isArray(bulletPoints) && bulletPoints.length > 0 ? `- 五点描述:\n${bulletPoints.map((b: string, i: number) => `  ${i + 1}. ${b}`).join('\n')}` : ''}
+${longDescription ? `- 长描述: ${longDescription}` : ''}
+${competitorSection}
+${keywordSection}
+
+## 输出要求
+
+请严格按以下结构输出 JSON:
+{
+  "optimizedTitle": "200字符以内的优化标题",
+  "optimizedBulletPoints": ["五点1", "五点2", "五点3", "五点4", "五点5"],
+  "optimizedLongDescription": "300-500字长描述",
+  "seoKeywords": ["关键词1", "关键词2", ...],
+  "competitorAnalysis": "竞品分析总结"
+}
+
+语气: ${toneGuide[tone] || toneGuide.professional}
+只输出 JSON，不要其他文字`;
 
     const service = new GeminiFileService();
 
     try {
-      // Use Gemini text-only: write prompt to a temp file as "text input"
-      // GeminiFileService requires a filePath, so we use it with a text prompt
       const result = await service.chat(prompt, { headless, responseTimeout: 90000 });
 
       if (!result.success) {
         return c.json({ success: false, error: result.error }, 500);
       }
 
-      // Parse JSON from Gemini response
       let parsed: Record<string, unknown>;
       try {
-        // Try to extract JSON from response
         const jsonMatch = result.response.match(/\{[\s\S]*\}/);
         parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {
           optimizedTitle: result.response.split('\n')[0]?.slice(0, 200) || title,
@@ -793,7 +827,10 @@ app.post('/api/ai/optimize', async (c) => {
         success: true,
         optimizedTitle: parsed.optimizedTitle || title,
         optimizedDescription: parsed.optimizedDescription || description,
+        optimizedBulletPoints: parsed.optimizedBulletPoints || [],
+        optimizedLongDescription: parsed.optimizedLongDescription || '',
         seoKeywords: parsed.seoKeywords || [],
+        competitorAnalysis: parsed.competitorAnalysis || '',
       });
     } finally {
       await service.close();
