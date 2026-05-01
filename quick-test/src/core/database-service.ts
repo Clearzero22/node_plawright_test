@@ -10,7 +10,7 @@ const DEFAULT_CONFIG: PoolConfig = {
 };
 
 export class DatabaseService {
-  private pool: Pool;
+  public pool: Pool;
 
   constructor(config: PoolConfig = DEFAULT_CONFIG) {
     this.pool = new Pool(config);
