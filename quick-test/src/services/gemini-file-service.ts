@@ -263,6 +263,89 @@ export class GeminiFileService {
     }
   }
 
+  /** Pure text chat without file upload */
+  async chat(prompt: string, options?: { headless?: boolean; responseTimeout?: number }): Promise<GeminiFileResult> {
+    const { headless = true, responseTimeout = 90000 } = options || {};
+
+    const sharedProfileDir = path.join(os.homedir(), '.node-plawright-test', 'chrome-profile', 'file-upload');
+    this.context = await chromium.launchPersistentContext(sharedProfileDir, {
+      headless,
+      viewport: { width: 1280, height: 900 },
+      locale: 'zh-CN',
+    });
+
+    try {
+      const page = this.context.pages()[0] || await this.context.newPage();
+      await page.goto('https://gemini.google.com/app', { timeout: 30000, waitUntil: 'domcontentloaded' });
+      await this.sleep(3000);
+
+      // Check login
+      let checkCount = 0;
+      while (checkCount < 3) {
+        const currentUrl = page.url();
+        if (currentUrl.includes('accounts.google.com') || currentUrl.includes('signin')) {
+          if (headless) {
+            return { success: false, prompt, response: '', fileUploaded: false, filePath: null, timestamp: new Date().toISOString(), error: '需要登录 Google 账户' };
+          }
+          try {
+            await page.waitForURL('https://gemini.google.com/**', { timeout: 120000 });
+            await this.sleep(3000);
+            break;
+          } catch {
+            return { success: false, prompt, response: '', fileUploaded: false, filePath: null, timestamp: new Date().toISOString(), error: '登录超时或失败' };
+          }
+        } else if (currentUrl.includes('gemini.google.com')) {
+          break;
+        }
+        checkCount++;
+        await this.sleep(2000);
+      }
+
+      await this.sleep(3000);
+
+      // Type prompt and send
+      const textbox = page.getByRole('textbox', { name: '为 Gemini 输入提示' });
+      await textbox.click();
+      await this.sleep(500);
+      await textbox.fill(prompt);
+      await this.sleep(1000);
+      await textbox.press('Enter');
+
+      // Wait for response
+      try {
+        await page.waitForSelector('[data-test-id="copy-button"], .response-content', { timeout: responseTimeout });
+        await this.sleep(3000);
+      } catch (error) {
+        return { success: false, prompt, response: '', fileUploaded: false, filePath: null, timestamp: new Date().toISOString(), error: `等待回复超时: ${(error as Error).message}` };
+      }
+
+      // Extract response
+      let responseText = '';
+      try {
+        const copyButton = page.locator('[data-test-id="copy-button"]').first();
+        if (await copyButton.isVisible({ timeout: 5000 })) {
+          await copyButton.click();
+          await this.sleep(500);
+          responseText = await page.evaluate(async () => navigator.clipboard.readText());
+        }
+      } catch {}
+
+      if (!responseText) {
+        responseText = await page.evaluate(() => {
+          for (const sel of ['[data-test-id="model-verbose-text"]', '.response-content', '.model-response']) {
+            const el = document.querySelector(sel);
+            if (el?.textContent?.trim()?.length > 10) return el.textContent!.trim();
+          }
+          return '';
+        });
+      }
+
+      return { success: true, prompt, response: responseText, fileUploaded: false, filePath: null, timestamp: new Date().toISOString() };
+    } finally {
+      await this.close();
+    }
+  }
+
   async close(): Promise<void> {
     if (this.context) {
       await this.context.close().catch(() => {});

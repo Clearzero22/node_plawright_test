@@ -727,6 +727,83 @@ app.post('/api/chatgpt/upload', async (c) => {
   }
 });
 
+// ─── POST /api/ai/optimize ──────────────────────────────────────
+
+app.post('/api/ai/optimize', async (c) => {
+  try {
+    const { title, description, tone = 'professional', language = 'zh-CN', headless = false } = await c.req.json();
+
+    if (!title || typeof title !== 'string') {
+      return c.json({ success: false, error: 'title is required' }, 400);
+    }
+
+    const toneGuide: Record<string, string> = {
+      professional: '专业、可信、突出品质',
+      marketing: '营销导向、有感染力、刺激购买欲',
+      concise: '简洁明了、突出核心卖点',
+    };
+
+    const langLabel: Record<string, string> = {
+      'zh-CN': '中文',
+      'en-US': 'English',
+      'ja-JP': '日本語',
+    };
+
+    const prompt = `你是一个电商文案优化专家。请优化以下商品信息。
+
+原标题: ${title}
+原描述: ${description || '(无)'}
+
+要求:
+- 语言: ${langLabel[language] || '中文'}
+- 语气: ${toneGuide[tone] || toneGuide.professional}
+- 输出 JSON 格式: { "optimizedTitle": "...", "optimizedDescription": "...", "seoKeywords": ["..."] }
+- 只输出 JSON，不要其他文字`;
+
+    const service = new GeminiFileService();
+
+    try {
+      // Use Gemini text-only: write prompt to a temp file as "text input"
+      // GeminiFileService requires a filePath, so we use it with a text prompt
+      const result = await service.chat(prompt, { headless, responseTimeout: 90000 });
+
+      if (!result.success) {
+        return c.json({ success: false, error: result.error }, 500);
+      }
+
+      // Parse JSON from Gemini response
+      let parsed: Record<string, unknown>;
+      try {
+        // Try to extract JSON from response
+        const jsonMatch = result.response.match(/\{[\s\S]*\}/);
+        parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {
+          optimizedTitle: result.response.split('\n')[0]?.slice(0, 200) || title,
+          optimizedDescription: result.response.slice(0, 1000) || description,
+          seoKeywords: [],
+        };
+      } catch {
+        parsed = {
+          optimizedTitle: result.response.split('\n')[0]?.slice(0, 200) || title,
+          optimizedDescription: result.response.slice(0, 1000) || description,
+          seoKeywords: [],
+        };
+      }
+
+      return c.json({
+        success: true,
+        optimizedTitle: parsed.optimizedTitle || title,
+        optimizedDescription: parsed.optimizedDescription || description,
+        seoKeywords: parsed.seoKeywords || [],
+      });
+    } finally {
+      await service.close();
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return c.json({ success: false, error: errorMessage }, 500);
+  }
+});
+
 // ─── 全局错误处理 ────────────────────────────────────────────
 
 app.onError((err, c) => {
@@ -754,6 +831,7 @@ serve(
     console.log(`     POST /api/scrape/amazon-product`);
     console.log(`     POST /api/keywords/xiyouzhaoci`);
     console.log(`     POST /api/gemini/upload`);
-    console.log(`     POST /api/chatgpt/upload\n`);
+    console.log(`     POST /api/chatgpt/upload`);
+    console.log(`     POST /api/ai/optimize\n`);
   }
 );
