@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>浏览器自动化</title>
+  <title>浏览器自动化 - CDP模式</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -15,11 +15,17 @@
       height: 100vh;
       padding: 24px;
     }
-    h1 { font-size: 20px; margin-bottom: 16px; color: #e94560; }
+    h1 { font-size: 20px; margin-bottom: 8px; color: #e94560; }
+    .subtitle {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 16px;
+    }
     .btn-group {
       display: flex;
       gap: 8px;
       margin-bottom: 16px;
+      flex-wrap: wrap;
     }
     button {
       padding: 10px 20px;
@@ -34,6 +40,21 @@
     button:hover { opacity: 0.85; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-secondary { background: #0f3460; border: 1px solid #e94560; }
+    .btn-success { background: #16c784; }
+    .btn-warning { background: #f59e0b; }
+    .btn-danger { background: #dc2626; }
+    .btn-chatgpt { background: linear-gradient(135deg, #10a37f 0%, #1a7f64 100%); }
+    .btn-sprite { background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); }
+    select {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      background: #0f3460;
+      color: #eee;
+      font-size: 14px;
+      cursor: pointer;
+      border: 1px solid #e94560;
+    }
     .log-box {
       flex: 1;
       background: #0f3460;
@@ -43,8 +64,9 @@
       font-family: 'Consolas', monospace;
       font-size: 13px;
       line-height: 1.6;
+      min-height: 200px;
     }
-    .log-entry { color: #a8d8ea; }
+    .log-entry { color: #a8d8ea; margin-bottom: 4px; }
     .log-entry:last-child { color: #fff; }
     .status-bar {
       font-size: 12px;
@@ -54,16 +76,238 @@
       background: #16213e;
       border-radius: 6px;
     }
+    .info-box {
+      background: #16213e;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 13px;
+    }
+    .info-label { color: #888; }
+    .info-value { color: #16c784; font-weight: 500; }
+    .divider {
+      height: 1px;
+      background: #0f3460;
+      margin: 16px 0;
+    }
+    .feature-list {
+      background: #0f3460;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+    .feature-list h3 {
+      color: #e94560;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .feature-list ul {
+      margin-left: 20px;
+    }
+    .feature-list li {
+      margin-bottom: 4px;
+      color: #a8d8ea;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: #1a1a2e;
+      padding: 24px;
+      border-radius: 12px;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+      position: relative;
+    }
+    .modal-content h2 {
+      color: #e94560;
+      margin-bottom: 16px;
+      font-size: 20px;
+    }
+    .modal-content h3 {
+      color: #16c784;
+      margin: 16px 0 8px;
+      font-size: 16px;
+    }
+    .modal-content p {
+      margin-bottom: 8px;
+      line-height: 1.6;
+    }
+    .modal-content code {
+      background: #0f3460;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: 'Consolas', monospace;
+      font-size: 13px;
+    }
+    .modal-content ol {
+      margin-left: 20px;
+      margin-bottom: 16px;
+    }
+    .modal-content li {
+      margin-bottom: 8px;
+    }
+    .close-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+    }
+    .close-btn:hover {
+      color: #e94560;
+    }
+    .copy-btn {
+      background: #16c784;
+      padding: 4px 12px;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+    .warning-box {
+      background: #f59e0b20;
+      border: 1px solid #f59e0b;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 16px 0;
+    }
+    .warning-box strong {
+      color: #f59e0b;
+    }
   </style>
 </head>
 <body>
-  <h1>浏览器自动化</h1>
+  <h1>🤖 浏览器自动化 - CDP模式</h1>
+  <div class="subtitle">使用 Chrome DevTools Protocol 实现真实浏览器连接</div>
+
   <div class="status-bar" id="browser-status">检测中...</div>
-  <div class="btn-group">
-    <button id="btn-chromium">运行 Chromium Demo</button>
-    <button id="btn-chrome" class="btn-secondary">运行本地 Chrome Demo</button>
+
+  <div class="feature-list">
+    <h3>✨ CDP 模式优势</h3>
+    <ul>
+      <li>✅ 100% 绕过 ChatGPT/Google 检测</li>
+      <li>✅ 使用您真实的 Chrome 浏览器</li>
+      <li>✅ 支持所有扩展和密码</li>
+      <li>✅ 无需任何反检测代码</li>
+    </ul>
   </div>
+
+  <div class="info-box" id="user-data-info">
+    <div class="info-item">
+      <span class="info-label">📁 用户数据目录:</span>
+      <span class="info-value">加载中...</span>
+    </div>
+  </div>
+
+  <div class="btn-group">
+    <button id="btn-show-guide" class="btn-info">📖 CDP 设置指南</button>
+    <select id="browser-select">
+      <option value="chrome">🌐 Google Chrome (CDP模式)</option>
+      <option value="chromium">⚡ Playwright Chromium</option>
+    </select>
+  </div>
+
+  <div class="btn-group">
+    <button id="btn-chatgpt" class="btn-chatgpt">🤖 ChatGPT</button>
+    <button id="btn-seller-sprite-cn" class="btn-sprite">🛍️ Seller Sprite 中文</button>
+    <button id="btn-seller-sprite" class="btn-sprite">🌍 Seller Sprite 国际</button>
+    <button id="btn-xiyouzhaoci" class="btn-warning">🎮 xiyouzhaoci</button>
+    <button id="btn-bilibili" class="btn-success">📺 Bilibili</button>
+    <button id="btn-taobao" class="btn-success">🛒 Taobao</button>
+    <button id="btn-chrome" class="btn-secondary">🌐 默认页面</button>
+  </div>
+
+  <div class="btn-group">
+    <button id="btn-clear-data" class="btn-danger">🗑️ 清除用户数据</button>
+  </div>
+
+  <div class="divider"></div>
+
   <div class="log-box" id="logs"></div>
+
+  <!-- CDP 设置指南模态框 -->
+  <div id="guide-modal" class="modal">
+    <div class="modal-content">
+      <button id="btn-close-guide" class="close-btn">&times;</button>
+      <h2>📖 Chrome CDP 调试模式设置指南</h2>
+
+      <div class="warning-box">
+        <strong>⚠️ 重要提示：</strong>
+        <p>在启动 CDP 模式前，请完全关闭所有 Chrome 窗口！</p>
+      </div>
+
+      <h3>步骤 1：关闭所有 Chrome</h3>
+      <p>完全关闭所有 Google Chrome 浏览器窗口（包括后台进程）</p>
+
+      <h3>步骤 2：启动 Chrome 调试模式</h3>
+      <p>选择以下任一命令，在命令提示符（CMD）中运行：</p>
+
+      <p><strong>方法 A - 简单命令：</strong></p>
+      <code>chrome.exe --remote-debugging-port=9222</code>
+      <button class="copy-btn" data-command="chrome-basic" onclick="copyChromeCommand(this)">📋 复制</button>
+
+      <p><strong>方法 B - 完整路径（推荐）：</strong></p>
+      <code>"C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222</code>
+      <button class="copy-btn" data-command="chrome-full" onclick="copyChromeCommand(this)">📋 复制</button>
+
+      <p><strong>方法 C - 32位 Chrome：</strong></p>
+      <code>"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222</code>
+      <button class="copy-btn" data-command="chrome-x64" onclick="copyChromeCommand(this)">📋 复制</button>
+
+      <h3>步骤 3：确认 Chrome 启动</h3>
+      <p>Chrome 会启动并显示提示："Chrome 正在被自动化测试软件控制"</p>
+      <p>✅ 这表示 CDP 模式已成功启动</p>
+
+      <h3>步骤 4：使用应用</h3>
+      <p>1. 关闭此设置指南</p>
+      <p>2. 点击任意网站按钮（如 ChatGPT）</p>
+      <p>3. 应用会自动连接到已启动的 Chrome</p>
+
+      <h3>🎯 首次使用 ChatGPT</h3>
+      <ol>
+        <li>按照上述步骤启动 CDP 模式</li>
+        <li>点击 "🤖 ChatGPT" 按钮</li>
+        <li>在打开的 Chrome 中手动登录 ChatGPT</li>
+        <li>登录状态会自动保存，下次无需重新登录</li>
+      </ol>
+
+      <div class="warning-box">
+        <strong>💡 提示：</strong>
+        <p>一旦登录成功，您可以关闭 CDP Chrome，下次正常使用即可。</p>
+        <p>登录信息已保存在您的 Chrome 用户数据中。</p>
+      </div>
+
+      <h3>❓ 常见问题</h3>
+      <p><strong>Q: 端口 9222 被占用怎么办？</strong></p>
+      <p>A: 使用其他端口，如：--remote-debugging-port=9223</p>
+
+      <p><strong>Q: 如何停止 CDP 模式？</strong></p>
+      <p>A: 直接关闭 Chrome 窗口即可</p>
+
+      <p><strong>Q: 每次都要启动 CDP 模式吗？</strong></p>
+      <p>A: 不需要。登录一次后，可以正常使用 Chrome</p>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
