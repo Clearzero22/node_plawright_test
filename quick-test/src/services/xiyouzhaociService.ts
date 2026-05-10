@@ -11,7 +11,7 @@ import { homedir } from 'os';
 
 // 统一使用共享的浏览器数据目录
 const DATA_DIR = join(homedir(), '.node-plawright-test', 'chrome-profile', 'file-upload');
-const CSV_OUTPUT_DIR = './output/keywords';
+const CSV_OUTPUT_DIR = process.env.DATA_DIR ? `${process.env.DATA_DIR}/output/keywords` : './output/keywords';
 
 interface ScrapedKeyword {
   rank: number;

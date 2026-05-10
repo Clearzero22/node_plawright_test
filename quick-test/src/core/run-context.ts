@@ -2,7 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { CrawlerRun } from './types';
 
-const RUNS_DIR = path.join(process.cwd(), 'output', 'runs');
+const DATA_DIR = process.env.DATA_DIR || process.cwd();
+const RUNS_DIR = path.join(DATA_DIR, 'output', 'runs');
 
 export class RunContext {
   readonly run: CrawlerRun;

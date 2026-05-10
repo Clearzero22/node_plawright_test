@@ -282,7 +282,8 @@ export class ChatGPTFileService {
 
       // 保存回复到文件
       if (responseText) {
-        const saveDir = path.join(process.cwd(), 'output');
+        const dataDir = process.env.DATA_DIR || process.cwd();
+        const saveDir = path.join(dataDir, 'output');
         if (!fs.existsSync(saveDir)) fs.mkdirSync(saveDir, { recursive: true });
         const savePath = path.join(saveDir, `chatgpt-response-${Date.now()}.md`);
         fs.writeFileSync(savePath, responseText, 'utf-8');
