@@ -1077,7 +1077,7 @@ if (FRONTEND_DIR && fs.existsSync(FRONTEND_DIR)) {
 
   // Serve static assets from FRONTEND_DIR
   app.get('/assets/*', (c) => {
-    const assetPath = new URL(c.req.url).pathname;
+    const assetPath = c.req.path;
     const filePath = path.join(FRONTEND_DIR, assetPath);
     try {
       const content = fs.readFileSync(filePath);
@@ -1091,7 +1091,7 @@ if (FRONTEND_DIR && fs.existsSync(FRONTEND_DIR)) {
 
   // SPA fallback: serve index.html for non-API routes not otherwise matched
   app.notFound((c) => {
-    const urlPath = new URL(c.req.url).pathname;
+    const urlPath = c.req.path;
     if (urlPath.startsWith('/api/')) {
       return c.json({ error: 'Not found' }, 404);
     }
