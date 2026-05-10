@@ -8,11 +8,12 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "ignoreDeprecations": "6.0",
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "types": ["node"]
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "src/test-*.ts", "src/run-chatgpt.ts", "src/generate.ts", "src/debug-*.ts", "src/scripts/run-gigab2b.ts", "src/scripts/demo-service.ts"]
 }

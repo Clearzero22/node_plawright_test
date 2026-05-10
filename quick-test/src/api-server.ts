@@ -21,6 +21,8 @@
  */
 
 import 'dotenv/config';
+import * as fs from 'fs';
+import * as path from 'path';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
@@ -1047,6 +1049,60 @@ app.get('/api/workflow/stats', async (c) => {
     await db.disconnect();
   }
 });
+
+// ─── 全局错误处理 ────────────────────────────────────────────
+
+// ─── 静态文件服务（Electron 生产模式） ─────────────────────────
+
+const FRONTEND_DIR = process.env.FRONTEND_DIR;
+
+if (FRONTEND_DIR && fs.existsSync(FRONTEND_DIR)) {
+  const mimeTypes: Record<string, string> = {
+    '.html': 'text/html',
+    '.js': 'application/javascript',
+    '.css': 'text/css',
+    '.json': 'application/json',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
+  };
+
+  function getMime(filePath: string): string {
+    const ext = path.extname(filePath).toLowerCase();
+    return mimeTypes[ext] || 'application/octet-stream';
+  }
+
+  // Serve static assets from FRONTEND_DIR
+  app.get('/assets/*', (c) => {
+    const assetPath = new URL(c.req.url).pathname;
+    const filePath = path.join(FRONTEND_DIR, assetPath);
+    try {
+      const content = fs.readFileSync(filePath);
+      return new Response(content, {
+        headers: { 'Content-Type': getMime(filePath), 'Cache-Control': 'public, max-age=86400' },
+      });
+    } catch {
+      return c.notFound();
+    }
+  });
+
+  // SPA fallback: serve index.html for non-API routes not otherwise matched
+  app.notFound((c) => {
+    const urlPath = new URL(c.req.url).pathname;
+    if (urlPath.startsWith('/api/')) {
+      return c.json({ error: 'Not found' }, 404);
+    }
+    const indexPath = path.join(FRONTEND_DIR, 'index.html');
+    try {
+      return c.html(fs.readFileSync(indexPath, 'utf-8'));
+    } catch {
+      return c.json({ error: 'Not found' }, 404);
+    }
+  });
+}
 
 // ─── 全局错误处理 ────────────────────────────────────────────
 

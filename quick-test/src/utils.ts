@@ -2,8 +2,12 @@ import { chromium, Browser, BrowserContext, Page } from 'playwright';
 import path from 'path';
 import os from 'os';
 
-// 获取用户数据目录
+// 获取用户数据目录（Electron 打包后使用 CHROME_DATA_DIR 环境变量）
 export function getUserDataDir(profileName?: string): string {
+  const electronDataDir = process.env.CHROME_DATA_DIR;
+  if (electronDataDir) {
+    return path.join(electronDataDir, profileName || 'automation');
+  }
   if (process.platform === 'darwin') {
     // macOS: 使用项目本地持久化目录，避免与正在使用的Chrome冲突
     const projectDataDir = path.join(os.homedir(), '.node-plawright-test', 'chrome-profile', profileName || 'automation');
@@ -59,7 +63,7 @@ export async function connectCDP(): Promise<Browser> {
  * 用于绕过 Google 等网站的自动化检测
  */
 export async function launchStealth(userDataDir?: string): Promise<BrowserContext> {
-  const dataDir = userDataDir || path.join(os.homedir(), '.node-plawright-test', 'chrome-profile', 'stealth');
+  const dataDir = userDataDir || getUserDataDir('stealth');
 
   log('🚀 启动隐身模式浏览器', 'info');
 
